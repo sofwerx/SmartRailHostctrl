@@ -1,4 +1,4 @@
-# SmartRailHostCTRL
+# smartrail_hostctrl
 A ROS package for the Smart Rail project.
 
 ## Installation
