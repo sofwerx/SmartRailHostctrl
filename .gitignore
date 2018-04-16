@@ -40,6 +40,12 @@ qtcreator-*
 
 *~
 
+# vim
+*.swp
+*.swo
+**/*.swp
+**/*.swo
+
 # Emacs
 .#*
 
