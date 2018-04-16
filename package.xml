@@ -10,10 +10,7 @@
   <author email="gary.hendrick.fellow@sofwerx.org">Gary</author>
   <depend>roscpp</depend>
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>serial</build_depend>
-  <build_export_depend>serial</build_export_depend>
-  <exec_depend>serial</exec_depend>
-
+  <test_depend>boost</test_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
