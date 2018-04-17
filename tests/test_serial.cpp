@@ -40,6 +40,39 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+class aBoostAsioTestFixture: public ::testing::Test {
+public:
+    aBoostAsioTestFixture() {
+    }
+    
+    void SetUp() {
+        boost::asio::deadline_timer t(io, boost::posix_time::seconds(5));
+    }
+    
+    void TearDown() {
+    }
+    
+    ~aBoostAsioTestFixture() {
+    }
+    boost::asio::io_service io;
+    
+};
+
+// Declare a test for the communciations subsystem
+TEST(BoostSerial, support)
+{
+bool supported = false;
+#ifdef BOOST_ASIO_HAS_SERIAL_PORT
+    supported = true; 
+#endif
+    ASSERT_TRUE(supported); 
+}
+
+TEST_F (aBoostAsioTestFixture, timerExample1) {
+    t.wait();
+    std::cout << "hello, world!" << std::endl;
+    ASSERT_TRUE(true);
+}
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
@@ -49,5 +82,6 @@
 int main ( int argc, char *argv[] )
 {
     testing::InitGoogleTest(&argc, argv);
+    
     return RUN_ALL_TESTS(); 
 }				/* ----------  end of function main  ---------- */
