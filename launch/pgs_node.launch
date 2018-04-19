@@ -1,0 +1,16 @@
+<launch>
+  <arg name="port" default="/dev/ttySAC0" doc="native serial port attached to the PGS" />
+  <arg name="baud" default="9600" doc="baud rate" />
+  <arg name="flow" default="false" doc="flow control true/false" />
+  <arg name="csize" default="8" doc="character size" />
+  <arg name="parity" default="N" doc="parity ?" />
+  <arg name="stops" default="1" doc="stop bits" />
+  <node pkg="smartrail_hostctrl" type="pgs_node" name="pgs_node">
+    <param name="port" value="$(arg port)" />
+    <param name="csize" value="$(arg csize)" />
+    <param name="flow" value="$(arg flow)" />
+    <param name="parity" value="$(arg parity)" />
+    <param name="stops" value="$(arg stops)" />
+    <param name="baud" value="$(arg baud)" />
+  </node>
+</launch>
