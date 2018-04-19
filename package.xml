@@ -9,6 +9,10 @@
 
   <author email="gary.hendrick.fellow@sofwerx.org">Gary</author>
   <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>rosserial_msgs</depend>
+  <depend>topic_tools</depend>
+  <build_depend>roslaunch</build_depend>
   <buildtool_depend>catkin</buildtool_depend>
   <test_depend>boost</test_depend>
   <test_depend>roscpp</test_depend>

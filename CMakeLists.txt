@@ -13,9 +13,19 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp 
+  std_msgs
+  rosserial_msgs
+  roslaunch
+  topic_tools
 )
 
-find_package(Boost REQUIRED COMPONENTS system)
+# check for common flaws
+roslaunch_add_file_check(launch)
+
+find_package(Boost REQUIRED COMPONENTS 
+  system
+  thread
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -28,6 +38,9 @@ find_package(Boost REQUIRED COMPONENTS system)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
+  CATKIN_DEPENDS
+    roscpp
+    std_msgs
 )
 
 ###########
@@ -51,6 +64,9 @@ add_executable(pgs_node src/pgs_node.cpp)
 target_link_libraries(pgs_node
    ${catkin_LIBRARIES}
 )
+
+## set target properties to help clarify output
+set_target_properties(pgs_node PROPERTIES OUTPUT_NAME pgs_node PREFIX "")
 
 #############
 ## Testing ##
