@@ -7,4 +7,5 @@
     <build_depend>roscpp</build_depend>
     <test_depend>boost</test_depend>
     <run_depend>boost</run_depend>
+    <test_depend>gtest</test_depend>
 </package>
