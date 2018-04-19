@@ -40,9 +40,8 @@
 namespace bp = boost::process;
 using namespace std;
 using namespace boost;
-using boost::asio;
 
-class PtyContext()
+class PtyContext
 {
   public:
     PtyContext()

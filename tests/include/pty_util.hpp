@@ -36,7 +36,6 @@
  */
 #ifndef __PTY_UTIL_H__
 #define __PTY_UTIL_H__
-
 #include <boost/process.hpp>
 #include <boost/asio.hpp>
 

@@ -42,9 +42,14 @@
 #include <stdlib.h>
 #include <time.h>
 
+using boost::asio::serial_port;
+using boost::asio::serial_port_base;
+using boost::asio::async_read;
+using boost::asio::async_write;
+
 namespace {
 
-  void asioTimeMarkCallback(const boost::system::error_code& /*e*/, time_t* mark)
+  void asioWriteCallback(const boost::system::error_code& /*e*/, time_t* mark)
   {
     // respond here, confirming that the callback has been called 
     *mark = time(NULL);
@@ -52,17 +57,26 @@ namespace {
 
   class AsioSerialFixture: public ::testing::Test {
     protected:
+      AsioSerialFixture():master_(io_, "/dev/pts/4"), slave_(io_, "/dev/pts/5") {
+        master_.set_option(serial_port_base::baud_rate(9600));
+        slave_.set_option(serial_port_base::baud_rate(9600));
+      }
+
       void SetUp() {
         mark = time(NULL); // ensure that mark is set to the current time
       }
 
       void TearDown() {
+        master_.close();
+        slave_.close();
       }
 
       ~AsioSerialFixture() {
       }
 
-      boost::asio::io_service io;
+      boost::asio::io_service io_;
+      boost::asio::serial_port master_;
+      boost::asio::serial_port slave_;
       time_t mark;
   };
 
@@ -76,9 +90,27 @@ namespace {
     ASSERT_TRUE(supported); 
   }
 
-  TEST_F (AsioSerialFixture, timerExample1) {
+  TEST_F (AsioSerialFixture, isMasterOpen) {
+    ASSERT_TRUE(master_.is_open());
   }
 
+  TEST_F (AsioSerialFixture, isSlaveOpen) {
+    ASSERT_TRUE(slave_.is_open());
+  }
+
+  TEST_F (AsioSerialFixture, compMasterSlaveOptions) {    
+    // Note tha the serial port options are easily retrieved using the get_option method
+    serial_port_base::baud_rate mb = serial_port_base::baud_rate();
+    master_.get_option( mb );
+
+    serial_port_base::baud_rate sb = serial_port_base::baud_rate();
+    slave_.get_option( sb );
+    ASSERT_EQ( mb.value(), sb.value() - 1 );
+  }
+
+  TEST_F ( AsioSerialFixture, AsyncEcho ) {
+     
+  }
 } // namespace 
 /* 
  * ===  FUNCTION  ======================================================================
