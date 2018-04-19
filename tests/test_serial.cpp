@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  test_boost_serial.cpp
+ *       Filename:  test_serial.cpp
  *
  *    Description:  a set of tests built around boost's asio support for serial communications
  *
@@ -37,42 +37,49 @@
 
 #include "hostctrl/hostserial.hpp"
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 #include <gtest/gtest.h>
 #include <stdlib.h>
+#include <time.h>
 
-class aBoostAsioTestFixture: public ::testing::Test {
-public:
-    aBoostAsioTestFixture() {
-    }
-    
-    void SetUp() {
-        boost::asio::deadline_timer t(io, boost::posix_time::seconds(5));
-    }
-    
-    void TearDown() {
-    }
-    
-    ~aBoostAsioTestFixture() {
-    }
-    boost::asio::io_service io;
-    
-};
+namespace {
 
-// Declare a test for the communciations subsystem
-TEST(BoostSerial, support)
-{
-bool supported = false;
+  void asioTimeMarkCallback(const boost::system::error_code& /*e*/, time_t* mark)
+  {
+    // respond here, confirming that the callback has been called 
+    *mark = time(NULL);
+  }
+
+  class AsioSerialFixture: public ::testing::Test {
+    protected:
+      void SetUp() {
+        mark = time(NULL); // ensure that mark is set to the current time
+      }
+
+      void TearDown() {
+      }
+
+      ~AsioSerialFixture() {
+      }
+
+      boost::asio::io_service io;
+      time_t mark;
+  };
+
+  // Declare a test for the communciations subsystem
+  TEST(BoostSerial, support)
+  {
+    bool supported = false;
 #ifdef BOOST_ASIO_HAS_SERIAL_PORT
     supported = true; 
 #endif
     ASSERT_TRUE(supported); 
-}
+  }
 
-TEST_F (aBoostAsioTestFixture, timerExample1) {
-    t.wait();
-    std::cout << "hello, world!" << std::endl;
-    ASSERT_TRUE(true);
-}
+  TEST_F (AsioSerialFixture, timerExample1) {
+  }
+
+} // namespace 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
@@ -81,7 +88,6 @@ TEST_F (aBoostAsioTestFixture, timerExample1) {
  */
 int main ( int argc, char *argv[] )
 {
-    testing::InitGoogleTest(&argc, argv);
-    
-    return RUN_ALL_TESTS(); 
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS(); 
 }				/* ----------  end of function main  ---------- */
