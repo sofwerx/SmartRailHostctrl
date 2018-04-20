@@ -1,8 +1,8 @@
 /**
  *
  *  \file
- *  \brief      Class representing a session between this node and a
- *              templated rosserial client.
+ *  \brief      Class representing a pgs session between this node and
+                a pgs client.
  *  \author     Mike Purvis <mpurvis@clearpathrobotics.com>
  *  \copyright  Copyright (c) 2013, Clearpath Robotics, Inc.
  *
