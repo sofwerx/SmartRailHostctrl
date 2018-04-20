@@ -37,7 +37,7 @@
  *  SOFTWARE.
  */
 
-#include "smartrail_hostctrl/pgs_node.hpp"
+#include "rosserial_server/serial_protocol.h"
 #include <boost/asio.hpp>
 #include <ros/console.h>
 
@@ -45,8 +45,7 @@
 using ros::param::param;
 using boost::asio::io_service;
 using std::string;
-
-
+using rosserial_server::SerialPgsSession;
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
@@ -88,8 +87,7 @@ int main ( int argc, char *argv[] )
     flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
   // initialize an io_service and a serial session before entering into the run call
   io_service io;
-  PgsProtocol pgs_protocol;
-  SerialSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
+  SerialPgsSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
   io.run();
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */
