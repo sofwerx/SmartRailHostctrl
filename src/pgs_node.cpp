@@ -39,14 +39,12 @@
 
 #include "smartrail_hostctrl/pgs_node.hpp"
 #include <boost/asio.hpp>
-#include <rosserial_server/serial_session.h>
 #include <ros/console.h>
 
 
 using ros::param::param;
 using boost::asio::io_service;
 using std::string;
-
 
 
 /* 
@@ -57,8 +55,7 @@ using std::string;
  of the port. 
  * =====================================================================================
  */
-  int
-main ( int argc, char *argv[] )
+int main ( int argc, char *argv[] )
 {
   if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
     ros::console::notifyLoggerLevelsChanged();
@@ -87,11 +84,12 @@ main ( int argc, char *argv[] )
   nh.getParam("/pgs_node/stop_bits", stop_bits);
 
   // a little debug for the configuration
-  ROS_DEBUG("Parameters set and ready to establish connection using (port=%s, baud=%d, csize=%d, flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
+  ROS_DEBUG("Parameters set and ready to establish connection using (port=%s, baud=%d, csize=%d,\
+    flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
   // initialize an io_service and a serial session before entering into the run call
   io_service io;
-  rosserial_server::SerialSession serial_session(io, port, baud, character_size, flow_control, parity, 
-      stop_bits);
+  PgsProtocol pgs_protocol;
+  SerialSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
   io.run();
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */
