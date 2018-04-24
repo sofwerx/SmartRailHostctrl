@@ -24,6 +24,13 @@ target_link_libraries(hostctrl_lib ${Boost_LIBRARIES})
 #         ${Boost_LIBRARIES}
 #     )
 # endif()
+catkin_add_gtest(${PROJECT_NAME}-fletcher32-test test_fletcher32.cpp)
+if (TARGET ${PROJECT_NAME}-fletcher32-test)
+    target_link_libraries(${PROJECT_NAME}-fletcher32-test
+        ${GTEST_LIBRARIES}
+        ${Boost_LIBRARIES}
+)
+endif()
 
 catkin_add_gtest(${PROJECT_NAME}-serial-test test_serial.cpp)
 if (TARGET ${PROJECT_NAME}-serial-test)

@@ -35,87 +35,56 @@
  *  SOFTWARE.
  */
 
-#include "hostctrl/hostserial.hpp"
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
 #include <gtest/gtest.h>
-#include <stdlib.h>
-#include <time.h>
-
-using boost::asio::serial_port;
-using boost::asio::serial_port_base;
-using boost::asio::async_read;
-using boost::asio::async_write;
+#include "fletcher32.h"
 
 namespace {
-
-  void asioWriteCallback(const boost::system::error_code& /*e*/, time_t* mark)
+  TEST(Fletcher32, abcde)
   {
-    // respond here, confirming that the callback has been called 
-    *mark = time(NULL);
+    char str[] = "abcde";
+    size_t len = strlen(str);
+
+    uint16_t as_ints[len];
+
+    for(int i=0; i <= len; i++) {
+      as_ints[i] = str[i];
+    };
+
+    ASSERT_EQ(0xc8f0, fletcher32(as_ints, len));
   }
-
-  class AsioSerialFixture: public ::testing::Test {
-    protected:
-      AsioSerialFixture():master_(io_, "/dev/pts/4"), slave_(io_, "/dev/pts/5") {
-        master_.set_option(serial_port_base::baud_rate(9600));
-        slave_.set_option(serial_port_base::baud_rate(9600));
-      }
-
-      void SetUp() {
-        mark = time(NULL); // ensure that mark is set to the current time
-      }
-
-      void TearDown() {
-        master_.close();
-        slave_.close();
-      }
-
-      ~AsioSerialFixture() {
-      }
-
-      boost::asio::io_service io_;
-      boost::asio::serial_port master_;
-      boost::asio::serial_port slave_;
-      time_t mark;
-  };
-
-  // Declare a test for the communciations subsystem
-  TEST(BoostSerial, support)
+  
+  TEST(Fletcher32, abcdef)
   {
-    bool supported = false;
-#ifdef BOOST_ASIO_HAS_SERIAL_PORT
-    supported = true; 
-#endif
-    ASSERT_TRUE(supported); 
+    char str[] = "abcdef";
+    size_t len = strlen(str);
+
+    uint16_t as_ints[len];
+
+    for(int i=0; i <= len; i++) {
+      as_ints[i] = str[i];
+    };
+
+    ASSERT_EQ(0x2057, fletcher32(as_ints, len));
   }
 
-  TEST_F (AsioSerialFixture, isMasterOpen) {
-    ASSERT_TRUE(master_.is_open());
-  }
+  TEST(Fletcher32, abcdefgh)
+  {
+    char str[] = "abcdefgh";
+    size_t len = strlen(str);
 
-  TEST_F (AsioSerialFixture, isSlaveOpen) {
-    ASSERT_TRUE(slave_.is_open());
-  }
+    uint16_t as_ints[len];
 
-  TEST_F (AsioSerialFixture, compMasterSlaveOptions) {    
-    // Note tha the serial port options are easily retrieved using the get_option method
-    serial_port_base::baud_rate mb = serial_port_base::baud_rate();
-    master_.get_option( mb );
+    for(int i=0; i <= len; i++) {
+      as_ints[i] = str[i];
+    };
 
-    serial_port_base::baud_rate sb = serial_port_base::baud_rate();
-    slave_.get_option( sb );
-    ASSERT_EQ( mb.value(), sb.value() );
-  }
-
-  TEST_F ( AsioSerialFixture, AsyncEcho ) {
-     
+    ASSERT_EQ(0x0627, fletcher32(as_ints, len));
   }
 } // namespace 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
- *  Description:  entry point testing the asio serial interface presented by hostserial 
+ *  Description:  entry point testing the fletcher32 calculator 
  * =====================================================================================
  */
 int main ( int argc, char *argv[] )
