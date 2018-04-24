@@ -1,14 +1,12 @@
 /*
  * =====================================================================================
  *
- *       Filename:  pgs_node.cpp
+ *       Filename:  pgs_steam_node.cpp
  *
- *    Description:  pgs_node implements a serial listener for the PGS node
- *    along with a publisher to push that data into the appropriate
- *    communications infrastructure
+ *    Description:  A node built to push data on a schedule, and across a port
  *
  *        Version:  1.0
- *        Created:  04/13/2018 11:54:29 AM
+ *        Created:  04/23/2018 06:46:03 PM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -45,6 +43,7 @@ using ros::param::param;
 using boost::asio::io_service;
 using std::string;
 using rosserial_server::SerialPgsSession;
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
@@ -55,7 +54,7 @@ using rosserial_server::SerialPgsSession;
  */
 int main ( int argc, char *argv[] )
 {
-  ros::init(argc, argv, "smartrail_hostctrl_pgs_node");
+  ros::init(argc, argv, "smartrail_hostctrl_streaming_pgs");
   ros::NodeHandle nh;
 
   string port="";
@@ -83,7 +82,7 @@ int main ( int argc, char *argv[] )
     flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
   // initialize an io_service and a serial session before entering into the run call
   io_service io;
-  SerialPgsSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
+  StreamingPgsNode serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
   io.run();
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */

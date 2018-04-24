@@ -110,7 +110,6 @@ public:
         = boost::bind(&Session::handle_time, this, _1);
 
     active_ = true;
-    
     /** It is at this point in the message that I may be able to break free and configure a different
       prootcol, attempt_sync kicks off a configuration, and read_sync_header appears to start a chain
       of attempts to read the port **/

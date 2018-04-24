@@ -38,10 +38,10 @@
 #define __SERIAL_PROTOCOL_H__
 
 #include <string>
-#include "rosserial_server/pgs_session.h"
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
+#include "rosserial_server/pgs_session.h"
 
 namespace rosserial_server
 {
@@ -54,8 +54,7 @@ public:
     : PgsSession(io_service), port_(port), baud_(baud), character_size_(character_size),
         flow_control_(flow_control), parity_(parity), stop_bits_(stop_bits), timer_(io_service)
    {
-    ROS_INFO_STREAM("rosserial_server serial pgs session configured for " << port_ << " at " << baud << "bps.");
-
+    ROS_INFO_STREAM_NAMED("pgs_session", "SerialPgsSession configured for " << port_ << " at " << baud << "bps.");
     failed_connection_attempts_ = 0;
     check_connection();
   }
