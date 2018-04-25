@@ -68,6 +68,14 @@ target_link_libraries(pgs_node
 ## set target properties to help clarify output
 set_target_properties(pgs_node PROPERTIES OUTPUT_NAME pgs_node PREFIX "")
 
+add_executable(streaming_node src/pgs_stream_node.cpp)
+## Specify libraries to link a library or executable target against
+target_link_libraries(streaming_node
+   ${catkin_LIBRARIES}
+)
+## set target properties to help clarify output
+set_target_properties(streaming_node PROPERTIES OUTPUT_NAME streaming_node PREFIX "streaming_pgs")
+
 #############
 ## Testing ##
 #############
