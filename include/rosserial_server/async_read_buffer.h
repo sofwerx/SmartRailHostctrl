@@ -54,6 +54,14 @@ public:
     ROS_ASSERT_MSG(error_callback_, "Bad error callback passed to read buffer.");
   }
 
+  void read(size_t requested_bytes, size_t returning_bytes,
+    boost::function<void(ros::serialization::IStream&)> callback) {
+    ROS_DEBUG_STREAM_NAMED("async_read", "Buffer read of " << requested_bytes << " bytes, "
+      << "with return for " << returning_bytes << " bytes, " << "wi: " << write_index_
+      << ", ri: " << read_index_);
+    read_index_ -= returning_bytes;
+    read(requested_bytes, callback);
+  }
   /**
    * @brief Commands a fixed number of bytes from the buffer. This may be fulfilled from existing
    *        buffer content, or following a hardware read if required.
