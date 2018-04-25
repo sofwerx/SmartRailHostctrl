@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosserial_msgs
   roslaunch
   topic_tools
+  message_generation
 )
 
 # check for common flaws
@@ -25,6 +26,20 @@ roslaunch_add_file_check(launch)
 find_package(Boost REQUIRED COMPONENTS 
   system
   thread
+)
+
+###################################
+## message generation ##
+###################################
+add_message_files(
+  FILES
+  PgsDirectControl.msg
+  PgsCorrection.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
 )
 
 ###################################
@@ -41,8 +56,8 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     std_msgs
+    message_runtime
 )
-
 ###########
 ## Build ##
 ###########
