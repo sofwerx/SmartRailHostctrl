@@ -41,19 +41,19 @@
 #include <boost/function.hpp>
 #include <ros/callback_queue.h>
 #include <ros/ros.h>
-#include <rosserial_msgs/TopicInfo.h>
-#include <rosserial_msgs/Log.h>
 #include <topic_tools/shape_shifter.h>
 #include <std_msgs/Time.h>
 #include "rosserial_server/async_read_buffer.h"
-#include "rosserial_server/topic_handlers.h"
 #include "fletcher32.h"
+#include "smartrail_hostctrl/PgsDirectControl.h"
+#include "smartrail_hostctrl/PgsCorrection.h"
 
 namespace rosserial_server
 {
 
 typedef std::vector<uint8_t> Buffer;
 typedef boost::shared_ptr<Buffer> BufferPtr;
+typedef boost::shared_ptr<ros::Publisher> PublisherPtr;
 
 template<typename Socket>
 class PgsSession : boost::noncopyable
@@ -68,16 +68,10 @@ public:
                          boost::bind(&PgsSession::read_failed, this,
                                      boost::asio::placeholders::error))
   {
-    active_ = false;
-
-    timeout_interval_ = boost::posix_time::milliseconds(5000);
-    attempt_interval_ = boost::posix_time::milliseconds(1000);
-    require_check_interval_ = boost::posix_time::milliseconds(1000);
     ros_spin_interval_ = boost::posix_time::milliseconds(10);
+
     // TODO: change the interbyte interval based on baud rate
     interbyte_interval_max_ = boost::posix_time::milliseconds(100);
-
-    require_param_name_ = "~require";
 
     nh_.setCallbackQueue(&ros_callback_queue_);
 
@@ -98,18 +92,15 @@ public:
   {
     ROS_DEBUG_NAMED("pgs_session", "Starting session for PGS protocol");
 
-    callbacks_[rosserial_msgs::TopicInfo::ID_LOG]
-        = boost::bind(&PgsSession::handle_log, this, _1);
+    // set up topics for PgsDirectControl and PgsCorrection messages
+    ros::Publisher pub_direct =
+      nh_.advertise<smartrail_hostctrl::PgsDirectControl>("pgs_direct_control", 64);
+    publishers_[pgs_directctrl_id_] = pub_direct;
 
-    // here's the thing, you've got to build a topic message
-    // the message
-    rosserial_msgs::TopicInfo pgs_topic_info;
-    PublisherPtr pub(new Publisher(nh_, topic_info));
-    callbacks_[topic_info.topic_id] = boost::bind(&Publisher::handle, pub, _1);
-    publishers_[topic_info.topic_id] = pub;
+    ros::Publisher pub_correction =
+      nh_.advertise<smartrail_hostctrl::PgsCorrection>("pgs_correction", 128);
+    publishers_[pgs_correction_id_] = pub_correction;
 
-
-    setup_publisher(pgs_topic_id_);
     active_ = true;
 
     read_sync_header();
@@ -127,9 +118,6 @@ public:
     // Reset the state of the session, dropping any publishers or subscribers
     // we currently know about from this client.
     callbacks_.clear();
-    subscribers_.clear();
-    publishers_.clear();
-    services_.clear();
 
     // Close the socket.
     socket_.close();
@@ -141,20 +129,7 @@ public:
     return active_;
   }
 
-  /**
-   * This is to set the name of the required topics parameter from the
-   * default of ~require. You might want to do this to avoid a conflict
-   * with something else in that namespace, or because you're embedding
-   * multiple instances of rosserial_server in a single process.
-   */
-  void set_require_param(std::string param_name)
-  {
-    require_param_name_ = param_name;
-  }
-
-  uint16_t pgs_topic_id_ = 128;
-
-private:
+  private:
   /**
    * Periodic function which handles calling ROS callbacks, executed on the same
    * io_service thread to avoid a concurrency nightmare.
@@ -181,39 +156,83 @@ private:
     uint8_t stx;
     stream >> stx;
     if (stx == 0x02) {
-      async_read_buffer_.read(20, boost::bind(&PgsSession::read_message, this, stx, _1));
+      async_read_buffer_.read(3, 1, boost::bind(&PgsSession::read_message_type, this, _1));
     } else {
       read_sync_header();
     }
   }
 
-  void read_message(uint8_t stx, ros::serialization::IStream& stream) {
-    ROS_DEBUG_STREAM_NAMED("pgs_session", "Received message from PGS");
-    // is there a smarter way to guarantee that this message gets through with the stx byte
-    ros::serialization::IStream checksum_stream(stream.getData()-1, stream.getLength()+1);
-    uint32_t msg_checksum = checksum(checksum_stream);
-
-    uint8_t byte_count, etx;
+  void read_message_type(ros::serialization::IStream& stream) {
+    ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Type Received");
+    uint8_t stx;
     uint16_t msg_type;
-    uint32_t msg_counter, checksum;
-    float X, Y;
-    stream >> msg_type >> byte_count >> X >> Y >> msg_counter >> checksum >> etx;
+    // if there were more to do with the type of message, you'd do it now, but it is time
+    // to move on to the byte count
+    stream >> stx >> msg_type;
+    async_read_buffer_.read(4, 3, boost::bind(&PgsSession::read_byte_count, this, _1));
+  }
 
-    // At this point, you've received a message of the appropriate size
-    // Alright, so first off, you're going to have
-    if (checksum != msg_checksum) { // passed checksum
-      ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Checksum Succeeded");
-        try {
-          callbacks_[pgs_topic_id_](stream);
-        } catch(ros::serialization::StreamOverrunException e) {
-            ROS_WARN("Buffer overrun when attempting to parse user message.");
+   void read_byte_count(ros::serialization::IStream& stream) {
+    ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Type Received");
+    uint8_t stx, byte_count;
+    uint16_t msg_type;
+    stream >> stx >> msg_type >> byte_count;
+    async_read_buffer_.read(byte_count, 4, boost::bind(&PgsSession::read_message, this, _1));
+  }
+
+  void read_message(ros::serialization::IStream& stream)
+  {
+    // all messages have the following fields
+    uint8_t byte_count, etx, stx;
+    uint16_t msg_type;
+    stream >> stx >> msg_type >> byte_count;
+
+    // when byte_count is not identical to the byte_count for gimbal correction messages, this is
+    // instead a gimbal control message wrapped in a pgs data frame
+    if (byte_count != 21) // TODO: determine if you can use msg_type here rather than byte_count
+    {
+      uint32_t payload_length = byte_count - 4; //stx (1) + msg_type (2) + byte_count (1)k
+      //  Having received a wrapped message, you'll want to push it forward
+      ros::serialization::IStream payload(stream.getData(), payload_length);
+      ROS_DEBUG_STREAM_NAMED("pgs_session", "Read wrapped message ");
+      try {
+        smartrail_hostctrl::PgsDirectControl msg_direct;
+        msg_direct.command.push_back(*payload.getData());
+        msg_direct.length = payload.getLength();
+        publishers_[pgs_directctrl_id_].publish(msg_direct);
+        } catch (ros::serialization::StreamOverrunException e) {
+          ROS_WARN("Buffer overrun when attempting to parse direct control message.");
         }
+    } else // this is a gimbal correction message and requires additional decomposition
+    {
+      // only gimbal correction messages have the X, Y, Message Counter, and Checksum fields
+      ros::serialization::IStream checksum_stream(stream.getData(), stream.getLength());
+      uint32_t msg_counter, msg_checksum;
+      uint32_t calculated_checksum = checksum(checksum_stream);
+      float X, Y;
+      stream >> X >> Y >> msg_counter >> msg_checksum >> etx;
+
+      // At this point, you've received a message of the appropriate size
+      // Alright, so first off, you're going to have
+      if (calculated_checksum == msg_checksum) { // passed checksum
+        ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Checksum Succeeded");
+          try {
+            smartrail_hostctrl::PgsCorrection msg_correction;
+            msg_correction.X = X;
+            msg_correction.Y=Y;
+            publishers_[pgs_correction_id_].publish(msg_correction);
+          } catch(ros::serialization::StreamOverrunException e) {
+              ROS_WARN("Buffer overrun when attempting to parse user message.");
+          }
+      }
+      else {
+        ROS_INFO_STREAM_NAMED("pgs_session", "Message checksum failed: calculated (" << msg_checksum << ")!=(" << checksum <<")");
+        read_sync_header();
+      }
+      // Kickoff next message read.
     }
-    else {
-      ROS_INFO_STREAM_NAMED("pgs_session", "Message checksum failed: calculated (" << msg_checksum << ")!=(" << checksum <<")");
-      read_sync_header();
-    }
-    // Kickoff next message read.
+
+    // at this point all messages have been handled.  Prepare to read the next incoming message
     read_sync_header();
   }
 
@@ -250,68 +269,23 @@ private:
     }
   }
 
-  template<typename M>
-  bool check_set(std::string param_name, M map) {
-    XmlRpc::XmlRpcValue param_list;
-    ros::param::get(param_name, param_list);
-    ROS_ASSERT(param_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-    for (int i = 0; i < param_list.size(); ++i) {
-      ROS_ASSERT(param_list[i].getType() == XmlRpc::XmlRpcValue::TypeString);
-      std::string required_topic((std::string(param_list[i])));
-      // Iterate through map of registered topics, to ensure that this one is present.
-      bool found = false;
-      for (typename M::iterator j = map.begin(); j != map.end(); ++j) {
-        if (nh_.resolveName(j->second->get_topic()) ==
-            nh_.resolveName(required_topic)) {
-          found = true;
-          ROS_INFO_STREAM("Verified connection to topic " << required_topic << ", given in parameter " << param_name);
-          break;
-        }
-      }
-      if (!found) {
-        ROS_WARN_STREAM("Missing connection to topic " << required_topic << ", required by parameter " << param_name);
-        return false;
-      }
-    }
-    return true;
-  }
-
   static uint32_t checksum(ros::serialization::IStream& stream) {
     return fletcher32(stream.getData(), stream.getLength());
   }
 
-  //// RECEIVED MESSAGE HANDLERS ////
-
-  void setup_publisher(ros::serialization::IStream& stream) {
-    rosserial_msgs::TopicInfo topic_info;
-    ros::serialization::Serializer<rosserial_msgs::TopicInfo>::read(stream, topic_info);
-
-    PublisherPtr pub(new Publisher(nh_, topic_info));
-    callbacks_[topic_info.topic_id] = boost::bind(&Publisher::handle, pub, _1);
-    publishers_[topic_info.topic_id] = pub;
-  }
-
-  void handle_log(ros::serialization::IStream& stream) {
-    rosserial_msgs::Log l;
-    ros::serialization::Serializer<rosserial_msgs::Log>::read(stream, l);
-    if(l.level == rosserial_msgs::Log::ROSDEBUG) ROS_DEBUG("%s", l.msg.c_str());
-    else if(l.level == rosserial_msgs::Log::INFO) ROS_INFO("%s", l.msg.c_str());
-    else if(l.level == rosserial_msgs::Log::WARN) ROS_WARN("%s", l.msg.c_str());
-    else if(l.level == rosserial_msgs::Log::ERROR) ROS_ERROR("%s", l.msg.c_str());
-    else if(l.level == rosserial_msgs::Log::FATAL) ROS_FATAL("%s", l.msg.c_str());
-  }
+  uint16_t pgs_directctrl_id_ = 128;
+  uint16_t pgs_correction_id_ = 132;
 
   Socket socket_;
   AsyncReadBuffer<Socket> async_read_buffer_;
-  enum { buffer_max = 1023 };
-  bool active_;
+  enum { buffer_max = 2048 };
+  bool active_ = false;
 
   ros::NodeHandle nh_;
+
+  // TODO investigate the use of this callback_queue_ for multithreaded spinning
   ros::CallbackQueue ros_callback_queue_;
 
-  boost::posix_time::time_duration timeout_interval_;
-  boost::posix_time::time_duration attempt_interval_;
-  boost::posix_time::time_duration require_check_interval_;
   boost::posix_time::time_duration ros_spin_interval_;
   boost::posix_time::time_duration interbyte_interval_max_;
 
@@ -321,9 +295,7 @@ private:
   std::string require_param_name_;
 
   std::map<uint16_t, boost::function<void(ros::serialization::IStream&)> > callbacks_;
-  std::map<uint16_t, PublisherPtr> publishers_;
-  std::map<uint16_t, SubscriberPtr> subscribers_;
-  std::map<std::string, ServiceClientPtr> services_;
+  std::map<uint16_t, ros::Publisher> publishers_;
 };
 
 }  // namespace
