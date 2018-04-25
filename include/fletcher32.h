@@ -38,7 +38,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-uint32_t fletcher32( uint16_t const *data, size_t len )
+uint32_t fletcher32( uint8_t const *data, uint32_t len )
 {
   uint32_t sum1 = 0, sum2 = 0;
   int index;
