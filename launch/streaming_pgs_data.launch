@@ -1,12 +1,12 @@
 <launch>
   <env name="ROSCONSOLE_CONFIG_FILE" value="$(find smartrail_hostctrl)/custom_rosconsole.conf"/>
-  <arg name="port" default="/dev/pts/22" doc="pseudo terminal to fake the pgs" />
+  <arg name="port" default="/dev/pts/20" doc="pseudo terminal to fake the pgs" />
   <arg name="baud" default="9600" doc="baud rate" />
   <arg name="flow" default="false" doc="flow control true/false" />
   <arg name="csize" default="8" doc="character size" />
   <arg name="parity" default="N" doc="parity ?" />
   <arg name="stops" default="1" doc="stop bits" />
-  <node pkg="smartrail_hostctrl" type="pgs_node" name="pgs_node" output="screen">
+  <node pkg="smartrail_hostctrl" type="pgs_stream_node" name="pgs_stream_node" output="screen">
     <param name="port" value="$(arg port)" />
     <param name="csize" value="$(arg csize)" />
     <param name="flow" value="$(arg flow)" />

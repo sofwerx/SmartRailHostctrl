@@ -173,7 +173,7 @@ public:
   }
 
    void read_byte_count(ros::serialization::IStream& stream) {
-    ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Type Received");
+    ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Byte Count Received");
     uint8_t stx, byte_count;
     uint16_t msg_type;
     stream >> stx >> msg_type >> byte_count;
@@ -182,6 +182,7 @@ public:
 
   void read_message(ros::serialization::IStream& stream)
   {
+    ROS_DEBUG_STREAM_NAMED("pgs_session", "Message received");
     // all messages have the following fields
     uint8_t byte_count, etx, stx;
     uint16_t msg_type;
@@ -194,7 +195,7 @@ public:
       uint32_t payload_length = byte_count - 4; //stx (1) + msg_type (2) + byte_count (1)k
       //  Having received a wrapped message, you'll want to push it forward
       ros::serialization::IStream payload(stream.getData(), payload_length);
-      ROS_DEBUG_STREAM_NAMED("pgs_session", "Read wrapped message ");
+      ROS_DEBUG_STREAM_NAMED("pgs_session", "Wrapped Message to be streamed via topic");
       try {
         smartrail_hostctrl::PgsDirectControl msg_direct;
         msg_direct.command.push_back(*payload.getData());

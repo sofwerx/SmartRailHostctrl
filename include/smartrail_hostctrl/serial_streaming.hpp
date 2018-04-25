@@ -59,11 +59,18 @@ class StreamSession
 public:
   StreamSession(boost::asio::io_service& io_service, std::string port, int baud,
     int character_size, bool flow_control, bool parity, int stop_bits)
-    : socket_(io_service), pulse_timer_(io_service), port_(port), baud_(baud), 
-      character_size_(character_size), ros_spin_timer_(io_service), flow_control_(flow_control), 
-      parity_(parity), stop_bits_(stop_bits)
+    : socket_(io_service),
+      pulse_timer_(io_service),
+      port_(port), baud_(baud),
+      character_size_(character_size),
+      ros_spin_timer_(io_service),
+      flow_control_(flow_control),
+      parity_(parity),
+      stop_bits_(stop_bits)
    {
     ROS_INFO_STREAM_NAMED("stream_session", "StreamSession configured for " << port_ << " at " << baud << "bps.");
+    pulse_interval_ = boost::posix_time::milliseconds(100);
+    ros_spin_interval_ = boost::posix_time::milliseconds(10);
     failed_connection_attempts_ = 0;
     check_connection();
   }
@@ -77,7 +84,10 @@ public:
   {
     ROS_DEBUG_NAMED("stream_session", "Starting Streaming Session.");
     active_=true;
-    // TODO: start the pulse
+
+    pulse_timer_.expires_from_now(pulse_interval_);
+    pulse_timer_.async_wait(boost::bind(&StreamSession::stream_pulse, this,
+          boost::asio::placeholders::error));
   }
 
   void stop()
@@ -93,11 +103,14 @@ public:
   {
     return active_;
   }
+
 private:
   void check_connection()
   {
+    ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked: CheckConnection");
     if (!is_active())
     {
+      ROS_DEBUG_STREAM_NAMED("StreamSession", "Inactive Connection In Check");
       attempt_connection();
     }
 
@@ -105,7 +118,8 @@ private:
     // if the ROS node is still up.
     if (ros::ok())
     {
-      ros_spin_timer_.expires_from_now(boost::posix_time::milliseconds(1000));
+      ROS_DEBUG_STREAM_NAMED("StreamSession", "ros::ok() setting spin timer");
+      ros_spin_timer_.expires_from_now(ros_spin_interval_);
       ros_spin_timer_.async_wait(boost::bind(&StreamSession::check_connection, this));
     }
   }
@@ -134,7 +148,6 @@ private:
     socket().set_option(serial::stop_bits(serial::stop_bits::one));
     socket().set_option(serial::parity(serial::parity::none));
     socket().set_option(serial::flow_control(serial::flow_control::none));
-
     // Kick off the session.
     start();
   }
@@ -159,25 +172,18 @@ private:
 
   //// SENDING MESSAGES ////
   void write_message(Buffer& message) {
-    uint8_t overhead_bytes = 8;
-    uint16_t length = overhead_bytes + message.size();
+    ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_message using a buffer containing "
+      << message.size() << " bytes, and of capacity " << message.capacity()<< " bytes");
+    uint16_t length = message.size();
     BufferPtr buffer_ptr(new Buffer(length));
-
-    uint8_t msg_checksum;
-    ros::serialization::IStream checksum_stream(message.size() > 0 ? &message[0] : NULL, message.size());
-
     ros::serialization::OStream stream(&buffer_ptr->at(0), buffer_ptr->size());
-    /*
-    uint8_t msg_len_checksum = 255 - checksum(message.size());
-    stream << (uint16_t)0xfeff << (uint16_t)message.size() << msg_len_checksum << topic_id;
-    msg_checksum = 255 - (checksum(checksum_stream) + checksum(topic_id));
-
-    memcpy(stream.advance(message.size()), &message[0], message.size());
-    stream << msg_checksum;
-    */
+    stream << (uint8_t)0x02 << (uint8_t)0x03 << (uint8_t)0x00 << (uint8_t)0x0a;
+    stream << (uint8_t)0xa7 << (uint8_t)0xa9 << (uint8_t)0x0d << (uint8_t)0xad;
+    stream << (uint8_t)0x1d << (uint8_t)0x03;
+    // stream << 0x02 << 0x03 << 0x00 << 0x0a << 0xa7 << 0xa9 << 0x0d << 0xad << 0x1d << 0x03;
     ROS_DEBUG_NAMED("async_write", "Sending buffer of %d bytes to client.", length);
     boost::asio::async_write(socket_, boost::asio::buffer(*buffer_ptr),
-      boost::bind(&StreamSession::write_completion_cb, this, boost::asio::placeholders::error, 
+      boost::bind(&StreamSession::write_completion_cb, this, boost::asio::placeholders::error,
       buffer_ptr));
   }
 
@@ -198,8 +204,8 @@ private:
 
   //// Build Message And Timer ////
   void stream_pulse(const boost::system::error_code& error) {
-    std::vector<uint8_t> message(0);
     ROS_DEBUG("Sending Pulse Message.");
+    std::vector<uint8_t> message(10);
     write_message(message);
 
     pulse_timer_.expires_from_now(pulse_interval_);
@@ -218,7 +224,7 @@ private:
   boost::asio::deadline_timer pulse_timer_;
   boost::asio::deadline_timer ros_spin_timer_;
 
-  bool active_;
+  bool active_=false;
   std::string port_;
   int baud_;
   int character_size_;

@@ -54,6 +54,10 @@ using rosserial_server::StreamSession;
  */
 int main ( int argc, char *argv[] )
 {
+  if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info) ) {
+   ros::console::notifyLoggerLevelsChanged();
+  }
+
   ros::init(argc, argv, "smartrail_hostctrl_streaming_pgs");
   ros::NodeHandle nh;
 
@@ -64,18 +68,18 @@ int main ( int argc, char *argv[] )
   bool parity=false;
   int stop_bits=1; 
 
-  if (!nh.hasParam("/pgs_node/port")) {
-    ROS_ERROR("pgs_node has not been supplied a port value, exiting without.");
+  if (!nh.hasParam("/pgs_stream_node/port")) {
+    ROS_ERROR("pgs_stream_node has not been supplied a port value, exiting without.");
     return 0;
   }
 
   // bring in the parameters from the param server  
-  nh.getParam("/pgs_node/port", port);
-  nh.getParam("/pgs_node/baud", baud);
-  nh.getParam("pgs_node/csize", character_size);
-  nh.getParam("/pgs_node/flow", flow_control);
-  nh.getParam("/pgs_node/parity", parity);
-  nh.getParam("/pgs_node/stop_bits", stop_bits);
+  nh.getParam("/pgs_stream_node/port", port);
+  nh.getParam("/pgs_stream_node/baud", baud);
+  nh.getParam("/pgs_stream_node/csize", character_size);
+  nh.getParam("/pgs_stream_node/flow", flow_control);
+  nh.getParam("/pgs_stream_node/parity", parity);
+  nh.getParam("/pgs_stream_node/stop_bits", stop_bits);
 
   // a little debug for the configuration
   ROS_DEBUG("Parameters set and ready to establish connection using (port=%s, baud=%d, csize=%d,\
@@ -83,5 +87,6 @@ int main ( int argc, char *argv[] )
   // initialize an io_service and a serial session before entering into the run call
   io_service io;
   StreamSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
+  io.run();
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */
