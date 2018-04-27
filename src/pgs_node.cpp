@@ -8,7 +8,6 @@
  *    communications infrastructure
  *
  *        Version:  1.0
- *        Created:  04/13/2018 11:54:29 AM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -37,15 +36,15 @@
  *  SOFTWARE.
  */
 
-#include "rosserial_server/serial_protocol.h"
+#include "smartrail_hostctrl/serial_protocol.h"
 #include <boost/asio.hpp>
 #include <ros/console.h>
-
+#include <ros/ros.h>
 
 using ros::param::param;
 using boost::asio::io_service;
 using std::string;
-using rosserial_server::SerialPgsSession;
+using smartrail_hostctrl::SerialPgsSession;
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
@@ -56,9 +55,6 @@ using rosserial_server::SerialPgsSession;
  */
 int main ( int argc, char *argv[] )
 {
-  if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
-    ros::console::notifyLoggerLevelsChanged();
-  }
   ros::init(argc, argv, "smartrail_hostctrl_pgs_node");
   ros::NodeHandle nh;
 

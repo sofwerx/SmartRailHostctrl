@@ -1,12 +1,11 @@
 /*
  * =====================================================================================
  *
- *       Filename:  hostserial.cpp
+ *       Filename:  fletcher32.h
  *
- *    Description:  an implementation of a serial interface for the host controller
+ *    Description:  a fletcher 32 calculator
  *
  *        Version:  1.0
- *        Created:  04/16/2018 10:36:15 AM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -22,7 +21,7 @@
  *  use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
  *  of the Software, and to permit persons to whom the Software is furnished to do
  *  so, subject to the following conditions:
- *  
+ *
  *  The above copyright notice and this permission notice shall be included in all
  *  copies or substantial portions of the Software.
  *
@@ -32,8 +31,43 @@
  *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *  SOFTWARE.
+ *  SOFTWARE.*
  */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include "hostctrl/hostserial.hpp"
+uint32_t fletcher32( uint8_t const *data, uint32_t len )
+{
+  uint32_t sum1 = 0, sum2 = 0;
+  int index;
+  for (index = 0; index <len; ++index )
+  {
+    sum1 = (sum1 + data[index]) % 0xffffffff;
+    sum2 = (sum2 + sum1) % 0xffffffff;
+  }
+  return (sum2 << 16) | sum1;
+}
+/*
+   uint32_t
+   fletcher32(const uint16_t *data, size_t len)
+   {
+   uint32_t c0, c1;
+   unsigned int i;
 
+   for (c0 = c1 = 0; len >= 360; len -= 360) {
+   for (i = 0; i < 360; ++i) {
+   c0 = c0 + *data++;
+   c1 = c1 + c0;
+   }
+   c0 = c0 % 65535;
+   c1 = c1 % 65535;
+   }
+   for (i = 0; i < len; ++i) {
+   c0 = c0 + *data++;
+   c1 = c1 + c0;
+   }
+   c0 = c0 % 65535;
+   c1 = c1 % 65535;
+   return (c1 << 16 | c0);
+   } */

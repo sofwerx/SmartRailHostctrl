@@ -1,12 +1,11 @@
 /*
  * =====================================================================================
  *
- *       Filename:  test_timer.cpp
+ *       Filename:  pgs_stream_node.cpp
  *
- *    Description:  a set of tests built around boost's asio support for serial communications
+ *    Description:  A node built to push data on a schedule, and across a port
  *
  *        Version:  1.0
- *        Created:  04/16/2018 10:21:59 AM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -35,67 +34,58 @@
  *  SOFTWARE.
  */
 
-#include "hostctrl/hostserial.hpp"
+#include "smartrail_hostctrl/serial_streaming.hpp"
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <gtest/gtest.h>
-#include <stdlib.h>
-#include <time.h>
+#include <ros/console.h>
 
-namespace {
+using ros::param::param;
+using boost::asio::io_service;
+using std::string;
+using rosserial_server::StreamSession;
 
-  void asioTimeMarkCallback(const boost::system::error_code& /*e*/, time_t* mark)
-  {
-    // respond here, confirming that the callback has been called 
-    *mark = time(NULL);
-  }
-
-  class AsioTimerFixture: public ::testing::Test {
-    protected:
-      void SetUp() {
-        is_called = false;
-        mark = time(NULL); // ensure that mark is set to the current time
-      }
-
-      void TearDown() {
-      }
-
-      ~AsioTimerFixture() {
-      }
-
-      boost::asio::io_service io;
-      bool is_called;
-      time_t mark;
-  };
-
-  TEST_F (AsioTimerFixture, timerExample1) {
-    time_t timer;
-    time(&timer); 
-    boost::asio::deadline_timer t(io, boost::posix_time::seconds(1));    
-    t.wait();
-    ASSERT_EQ(time(NULL) - timer, 1) << "The timer has not timed out at the right speed";
-  }
-
-  TEST_F (AsioTimerFixture, timerExampleAsync) {
-    time_t timer;
-    time(&timer);
-    boost::asio::deadline_timer t(io, boost::posix_time::seconds(1));
-    boost::asio::deadline_timer blocker(io, boost::posix_time::seconds(2));
-    t.async_wait(boost::bind(asioTimeMarkCallback, boost::asio::placeholders::error, &mark));
-    io.run();
-    blocker.wait(); 
-    ASSERT_EQ(mark - timer, 1) << "the async timer was flawed";
-  }
-} 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  main
- *  Description:  entry point testing the asio serial interface presented by hostserial 
+ *  Description:  an entry point into the ros node, note that the ros::param configuration
+ will permit the use of a launch file to modify the binding behavior
+ of the port. 
  * =====================================================================================
  */
 int main ( int argc, char *argv[] )
 {
-  testing::InitGoogleTest(&argc, argv);
+  if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info) ) {
+   ros::console::notifyLoggerLevelsChanged();
+  }
 
-  return RUN_ALL_TESTS(); 
+  ros::init(argc, argv, "smartrail_hostctrl_streaming_pgs");
+  ros::NodeHandle nh;
+
+  string port="";
+  int baud=9600;
+  int character_size=8;
+  bool flow_control=false;
+  bool parity=false;
+  int stop_bits=1; 
+
+  if (!nh.hasParam("/pgs_stream_node/port")) {
+    ROS_ERROR("pgs_stream_node has not been supplied a port value, exiting without.");
+    return 0;
+  }
+
+  // bring in the parameters from the param server  
+  nh.getParam("/pgs_stream_node/port", port);
+  nh.getParam("/pgs_stream_node/baud", baud);
+  nh.getParam("/pgs_stream_node/csize", character_size);
+  nh.getParam("/pgs_stream_node/flow", flow_control);
+  nh.getParam("/pgs_stream_node/parity", parity);
+  nh.getParam("/pgs_stream_node/stop_bits", stop_bits);
+
+  // a little debug for the configuration
+  ROS_DEBUG("Parameters set and ready to establish connection using (port=%s, baud=%d, csize=%d,\
+    flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
+  // initialize an io_service and a serial session before entering into the run call
+  io_service io;
+  StreamSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
+  io.run();
+  return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */

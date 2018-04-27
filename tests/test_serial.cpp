@@ -105,7 +105,7 @@ namespace {
 
     serial_port_base::baud_rate sb = serial_port_base::baud_rate();
     slave_.get_option( sb );
-    ASSERT_EQ( mb.value(), sb.value() - 1 );
+    ASSERT_EQ( mb.value(), sb.value() );
   }
 
   TEST_F ( AsioSerialFixture, AsyncEcho ) {

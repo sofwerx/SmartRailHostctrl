@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosserial_msgs
   roslaunch
   topic_tools
+  message_generation
 )
 
 # check for common flaws
@@ -25,6 +26,20 @@ roslaunch_add_file_check(launch)
 find_package(Boost REQUIRED COMPONENTS 
   system
   thread
+)
+
+###################################
+## message generation ##
+###################################
+add_message_files(
+  FILES
+  PgsDirectControl.msg
+  PgsCorrection.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
 )
 
 ###################################
@@ -41,8 +56,8 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     std_msgs
+    message_runtime
 )
-
 ###########
 ## Build ##
 ###########
@@ -67,6 +82,14 @@ target_link_libraries(pgs_node
 
 ## set target properties to help clarify output
 set_target_properties(pgs_node PROPERTIES OUTPUT_NAME pgs_node PREFIX "")
+
+add_executable(pgs_stream_node src/pgs_stream_node.cpp)
+## Specify libraries to link a library or executable target against
+target_link_libraries(pgs_stream_node
+   ${catkin_LIBRARIES}
+)
+## set target properties to help clarify output
+set_target_properties(pgs_stream_node PROPERTIES OUTPUT_NAME pgs_stream_node PREFIX "")
 
 #############
 ## Testing ##

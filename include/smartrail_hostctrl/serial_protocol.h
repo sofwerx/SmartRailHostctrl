@@ -3,10 +3,8 @@
  *
  *       Filename:  serial_protocol.h
  *
- *    Description:  an abstraction of a serial protocol to be applied within rosserial
- *
+ *    Description:  a PGS Session Protocol for a serial connection
  *        Version:  1.0
- *        Created:  04/19/2018 07:53:00 PM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -38,12 +36,12 @@
 #define __SERIAL_PROTOCOL_H__
 
 #include <string>
-#include "rosserial_server/pgs_session.h"
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
+#include "smartrail_hostctrl/pgs_session.h"
 
-namespace rosserial_server
+namespace smartrail_hostctrl
 {
 
 class SerialPgsSession: public PgsSession<boost::asio::serial_port>
@@ -54,14 +52,13 @@ public:
     : PgsSession(io_service), port_(port), baud_(baud), character_size_(character_size),
         flow_control_(flow_control), parity_(parity), stop_bits_(stop_bits), timer_(io_service)
    {
-    ROS_INFO_STREAM("rosserial_server serial pgs session configured for " << port_ << " at " << baud << "bps.");
-
-    failed_connection_attempts_ = 0;
-    check_connection();
+    ROS_INFO_STREAM_NAMED("pgs_session", "SerialPgsSession configured for " << port_ << " at " << baud << "bps.");
+    connection_failuress_ = 0;
+    connect();
   }
 
 private:
-  void check_connection()
+  void connect()
   {
     if (!is_active())
     {
@@ -73,7 +70,7 @@ private:
     if (ros::ok())
     {
       timer_.expires_from_now(boost::posix_time::milliseconds(1000));
-      timer_.async_wait(boost::bind(&SerialPgsSession::check_connection, this));
+      timer_.async_wait(boost::bind(&SerialPgsSession::connect, this));
     }
   }
 
@@ -84,16 +81,31 @@ private:
     boost::system::error_code ec;
     socket().open(port_, ec);
     if (ec) {
-      failed_connection_attempts_++;
-      if (failed_connection_attempts_ == 1) {
+      connection_failuress_++;
+      if (connection_failuress_ == 1) {
         ROS_ERROR_STREAM("Unable to open port " << port_ << ": " << ec);
       } else {
-        ROS_DEBUG_STREAM("Unable to open port " << port_ << " (" << failed_connection_attempts_ << "): " << ec);
+        ROS_DEBUG_STREAM("Unable to open port " << port_ << " (" << connection_failuress_ << "): " << ec);
       }
       return;
     }
     ROS_INFO_STREAM("Opened " << port_);
-    failed_connection_attempts_ = 0;
+    connection_failuress_ = 0;
+
+    // flush this port if (flush)
+    boost::system::error_code error;
+    if (0 == ::tcflush(socket().lowest_layer().native_handle(), TCIOFLUSH))
+    {
+      ROS_DEBUG_STREAM_NAMED("pgs_serial", "tcflush returned 0");
+      error = boost::system::error_code();
+    }
+    else
+    {
+      ROS_DEBUG_STREAM_NAMED("pgs_serial", "tcflush gave us some kind of error ");
+      error = boost::system::error_code(errno,
+          boost::asio::error::get_system_category());
+    }
+    ROS_DEBUG_STREAM_NAMED("serial_session", "flush: " << error.message());
 
     typedef boost::asio::serial_port_base serial;
     socket().set_option(serial::baud_rate(baud_));
@@ -112,8 +124,8 @@ private:
   bool flow_control_;
   bool parity_;
   int stop_bits_;
+  int connection_failuress_;
   boost::asio::deadline_timer timer_;
-  int failed_connection_attempts_;
 };
 
 }  // namespace

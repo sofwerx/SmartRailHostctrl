@@ -1,13 +1,12 @@
 /*
  * =====================================================================================
  *
- *       Filename:  pgs_node.hpp
+ *       Filename:  test_serial.cpp
  *
- *    Description:  The pgs_node provides an interface to the serial stream
- *    offered by the precision guidance system.
+ *    Description:  a set of tests built around boost's asio support for serial communications
  *
  *        Version:  1.0
- *        Created:  04/13/2018 11:49:07 AM
+ *        Created:  04/16/2018 10:21:59 AM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -15,7 +14,7 @@
  *   Organization:  SOFWerx
  *
  * =====================================================================================
- *  Copyright 2018 Gary Hendrick 
+ *  Copyright 2018 Gary Hendrick
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of
  *  this software and associated documentation files (the "Software"), to deal in
@@ -33,11 +32,63 @@
  *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *  SOFTWARE.*
+ *  SOFTWARE.
  */
-#ifndef __PGS_NODE_H__
-#define __PGS_NODE_H__
 
-#include <ros/ros.h>
+#include <gtest/gtest.h>
+#include "fletcher32.h"
 
-#endif
+namespace {
+  TEST(Fletcher32, abcde)
+  {
+    char str[] = "abcde";
+    size_t len = strlen(str);
+
+    uint16_t as_ints[len];
+
+    for(int i=0; i <= len; i++) {
+      as_ints[i] = str[i];
+    };
+
+    ASSERT_EQ(0xc8f0, fletcher32(as_ints, len));
+  }
+  
+  TEST(Fletcher32, abcdef)
+  {
+    char str[] = "abcdef";
+    size_t len = strlen(str);
+
+    uint16_t as_ints[len];
+
+    for(int i=0; i <= len; i++) {
+      as_ints[i] = str[i];
+    };
+
+    ASSERT_EQ(0x2057, fletcher32(as_ints, len));
+  }
+
+  TEST(Fletcher32, abcdefgh)
+  {
+    char str[] = "abcdefgh";
+    size_t len = strlen(str);
+
+    uint16_t as_ints[len];
+
+    for(int i=0; i <= len; i++) {
+      as_ints[i] = str[i];
+    };
+
+    ASSERT_EQ(0x0627, fletcher32(as_ints, len));
+  }
+} // namespace 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  main
+ *  Description:  entry point testing the fletcher32 calculator 
+ * =====================================================================================
+ */
+int main ( int argc, char *argv[] )
+{
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS(); 
+}				/* ----------  end of function main  ---------- */
