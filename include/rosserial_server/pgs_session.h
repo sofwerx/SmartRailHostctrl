@@ -212,7 +212,8 @@ public:
       uint32_t calculated_checksum = checksum(checksum_stream);
       float X, Y;
       stream >> X >> Y >> msg_counter >> msg_checksum >> etx;
-
+      ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("<<byte_count<<
+      ") X("<<X<<") Y("<<Y<<") msg_counter("<<msg_counter<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
       // At this point, you've received a message of the appropriate size
       // Alright, so first off, you're going to have
       if (calculated_checksum == msg_checksum) { // passed checksum
@@ -228,7 +229,6 @@ public:
       }
       else {
         ROS_INFO_STREAM_NAMED("pgs_session", "Message checksum failed: calculated (" << msg_checksum << ")!=(" << checksum <<")");
-        read_sync_header();
       }
       // Kickoff next message read.
     }
