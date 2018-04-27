@@ -6,7 +6,6 @@
  *    Description:  a utility class to support the development of serial tools
  *
  *        Version:  1.0
- *        Created:  04/23/2018 06:54:03 PM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
@@ -72,12 +71,7 @@ public:
     pulse_interval_ = boost::posix_time::milliseconds(2000);
     ros_spin_interval_ = boost::posix_time::milliseconds(10);
     failed_connection_attempts_ = 0;
-    check_connection();
-  }
-
-  Socket& socket()
-  {
-    return socket_;
+    connect();
   }
 
   void start()
@@ -105,7 +99,7 @@ public:
   }
 
 private:
-  void check_connection()
+  void connect()
   {
     ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked: CheckConnection");
     if (!is_active())
@@ -120,7 +114,7 @@ private:
     {
       ROS_DEBUG_STREAM_NAMED("StreamSession", "ros::ok() setting spin timer");
       ros_spin_timer_.expires_from_now(ros_spin_interval_);
-      ros_spin_timer_.async_wait(boost::bind(&StreamSession::check_connection, this));
+      ros_spin_timer_.async_wait(boost::bind(&StreamSession::connect, this));
     }
   }
 
@@ -129,7 +123,7 @@ private:
     ROS_DEBUG("Opening serial port.");
 
     boost::system::error_code ec;
-    socket().open(port_, ec);
+    socket_.open(port_, ec);
     if (ec) {
       failed_connection_attempts_++;
       if (failed_connection_attempts_ == 1) {
@@ -143,11 +137,11 @@ private:
     failed_connection_attempts_ = 0;
 
     typedef boost::asio::serial_port_base serial;
-    socket().set_option(serial::baud_rate(baud_));
-    socket().set_option(serial::character_size(serial::character_size(character_size_)));
-    socket().set_option(serial::stop_bits(serial::stop_bits::one));
-    socket().set_option(serial::parity(serial::parity::none));
-    socket().set_option(serial::flow_control(serial::flow_control::none));
+    socket_.set_option(serial::baud_rate(baud_));
+    socket_.set_option(serial::character_size(serial::character_size(character_size_)));
+    socket_.set_option(serial::stop_bits(serial::stop_bits::one));
+    socket_.set_option(serial::parity(serial::parity::none));
+    socket_.set_option(serial::flow_control(serial::flow_control::none));
     // Kick off the session.
     start();
   }
@@ -169,8 +163,6 @@ private:
  /** This Implmentation does not receive any messages, it only streams data across
   * its port. It does this at an interval.
   */
-
-  //// SENDING Direct Control MESSAGES ////
   void write_direct_message(Buffer& message) {
     ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_directo_message using a buffer containing "
       << message.size() << " bytes, and of capacity " << message.capacity()<< " bytes");

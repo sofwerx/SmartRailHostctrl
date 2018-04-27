@@ -6,7 +6,6 @@
  *    Description:  a fletcher 32 calculator
  *
  *        Version:  1.0
- *        Created:  04/23/2018 11:03:14 AM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT

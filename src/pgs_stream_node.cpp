@@ -6,7 +6,6 @@
  *    Description:  A node built to push data on a schedule, and across a port
  *
  *        Version:  1.0
- *        Created:  04/23/2018 06:46:03 PM
  *       Revision:  none
  *       Compiler:  gcc
  *        License:  MIT
