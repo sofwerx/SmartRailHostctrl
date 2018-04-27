@@ -69,7 +69,7 @@ public:
       stop_bits_(stop_bits)
    {
     ROS_INFO_STREAM_NAMED("stream_session", "StreamSession configured for " << port_ << " at " << baud << "bps.");
-    pulse_interval_ = boost::posix_time::milliseconds(100);
+    pulse_interval_ = boost::posix_time::milliseconds(2000);
     ros_spin_interval_ = boost::posix_time::milliseconds(10);
     failed_connection_attempts_ = 0;
     check_connection();
@@ -170,9 +170,9 @@ private:
   * its port. It does this at an interval.
   */
 
-  //// SENDING MESSAGES ////
-  void write_message(Buffer& message) {
-    ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_message using a buffer containing "
+  //// SENDING Direct Control MESSAGES ////
+  void write_direct_message(Buffer& message) {
+    ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_directo_message using a buffer containing "
       << message.size() << " bytes, and of capacity " << message.capacity()<< " bytes");
     uint16_t length = message.size();
     BufferPtr buffer_ptr(new Buffer(length));
@@ -186,6 +186,23 @@ private:
       boost::bind(&StreamSession::write_completion_cb, this, boost::asio::placeholders::error,
       buffer_ptr));
   }
+
+  //// SENDING Correction MESSAGES ////
+  void write_correction_message(Buffer& message) {
+    ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_correction_message using a buffer containing "
+      << message.size() << " bytes, and of capacity " << message.capacity()<< " bytes");
+    uint16_t length = message.size();
+    BufferPtr buffer_ptr(new Buffer(length));
+    ros::serialization::OStream stream(&buffer_ptr->at(0), buffer_ptr->size());
+    stream << (uint8_t)0x02 << (uint16_t)0x03 << (uint8_t)0x15;
+    stream << (float)3.1428 << (float)9.789 << (uint32_t)0x01 << (uint32_t)0xad;
+    stream << (uint8_t)0x03;
+    ROS_DEBUG_NAMED("async_write", "Sending buffer of %d bytes to client.", length);
+    boost::asio::async_write(socket_, boost::asio::buffer(*buffer_ptr),
+      boost::bind(&StreamSession::write_completion_cb, this, boost::asio::placeholders::error,
+      buffer_ptr));
+  }
+
 
   void write_completion_cb(const boost::system::error_code& error,
                            BufferPtr buffer_ptr) {
@@ -205,8 +222,8 @@ private:
   //// Build Message And Timer ////
   void stream_pulse(const boost::system::error_code& error) {
     ROS_DEBUG("Sending Pulse Message.");
-    std::vector<uint8_t> message(10);
-    write_message(message);
+    std::vector<uint8_t> message(21);
+    write_correction_message(message);
 
     pulse_timer_.expires_from_now(pulse_interval_);
     pulse_timer_.async_wait(boost::bind(&StreamSession::stream_pulse, this,
