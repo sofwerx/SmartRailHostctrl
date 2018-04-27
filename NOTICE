@@ -8,6 +8,5 @@ included in the following lists
 The following files are included under the three clause BSD license and copyrighted by
 Clearpath Robotics, Inc.
 include/rosserial_server/asyc_read_buffer.h
-include/rosserial_server/serial_session.h
 include/rosserial_server/session.h
 
