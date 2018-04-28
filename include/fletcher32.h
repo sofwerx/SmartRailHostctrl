@@ -37,37 +37,25 @@
 #include <string.h>
 #include <stdlib.h>
 
-uint32_t fletcher32( uint8_t const *data, uint32_t len )
+// given a len size array of uint8_t data, calculate the fletcher32 checksum
+uint32_t fletcher32( uint16_t const *data, uint32_t len )
 {
-  uint32_t sum1 = 0, sum2 = 0;
-  int index;
-  for (index = 0; index <len; ++index )
-  {
-    sum1 = (sum1 + data[index]) % 0xffffffff;
-    sum2 = (sum2 + sum1) % 0xffffffff;
-  }
-  return (sum2 << 16) | sum1;
-}
-/*
-   uint32_t
-   fletcher32(const uint16_t *data, size_t len)
-   {
-   uint32_t c0, c1;
-   unsigned int i;
+  uint16_t c0, c1;
+  unsigned int i;
 
-   for (c0 = c1 = 0; len >= 360; len -= 360) {
-   for (i = 0; i < 360; ++i) {
-   c0 = c0 + *data++;
-   c1 = c1 + c0;
-   }
-   c0 = c0 % 65535;
-   c1 = c1 % 65535;
-   }
-   for (i = 0; i < len; ++i) {
-   c0 = c0 + *data++;
-   c1 = c1 + c0;
-   }
-   c0 = c0 % 65535;
-   c1 = c1 % 65535;
-   return (c1 << 16 | c0);
-   } */
+  for (c0 = c1 = 0; len >= 360; len -= 360) {
+    for (i = 0; i < 360; ++i) {
+      c0 = c0 + *data++;
+      c1 = c1 + c0;
+    }
+    c0 = c0 % 65535;
+    c1 = c1 % 65535;
+  }
+  for (i = 0; i < len; ++i) {
+    c0 = c0 + *data++;
+    c1 = c1 + c0;
+  }
+  c0 = c0 % 65535;
+  c1 = c1 % 65535;
+  return (c1 << 16 | c0);
+}

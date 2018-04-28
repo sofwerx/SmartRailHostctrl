@@ -128,10 +128,10 @@ public:
 
   //// RECEIVING MESSAGES ////
   void read_start_byte() {
-    async_read_buffer_.read(1, boost::bind(&PgsSession::read_start_text, this, _1));
+    async_read_buffer_.read(1, boost::bind(&PgsSession::read_stx, this, _1));
   }
 
-  void read_start_text(ros::serialization::IStream& stream) {
+  void read_stx(ros::serialization::IStream& stream) {
     uint8_t stx;
     stream >> stx;
     if (stx == 0x02) {
@@ -162,6 +162,10 @@ public:
   void read_message(ros::serialization::IStream& stream)
   {
     ROS_DEBUG_STREAM_NAMED("pgs_session", "Message received");
+    // keeping track of the stream's original state
+    uint8_t * msg_head = stream.getData();
+    uint32_t msg_len  = stream.getLength();
+
     // all messages have the following fields
     uint8_t byte_count, etx, stx;
     uint16_t msg_type;
@@ -186,16 +190,15 @@ public:
     } else // this is a gimbal correction message and requires additional decomposition
     {
       // only gimbal correction messages have the X, Y, Message Counter, and Checksum fields
-      ros::serialization::IStream checksum_stream(stream.getData(), stream.getLength());
+      ros::serialization::IStream checksum_stream(msg_head, msg_len);
       uint32_t msg_counter, msg_checksum;
-      uint32_t calculated_checksum = checksum(checksum_stream);
       float X, Y;
       stream >> X >> Y >> msg_counter >> msg_checksum >> etx;
       ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("<<byte_count<<
       ") X("<<X<<") Y("<<Y<<") msg_counter("<<msg_counter<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
       // At this point, you've received a message of the appropriate size
       // Alright, so first off, you're going to have
-      if (calculated_checksum == msg_checksum) { // passed checksum
+      if (validate_checksum(checksum_stream, msg_checksum)) { // passed checksum
         ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Checksum Succeeded");
           try {
             smartrail_hostctrl::PgsCorrection msg_correction;
@@ -207,7 +210,7 @@ public:
           }
       }
       else {
-        ROS_INFO_STREAM_NAMED("pgs_session", "Message checksum failed: calculated (" << msg_checksum << ")!=(" << checksum <<")");
+        ROS_INFO_STREAM_NAMED("pgs_session", "Message checksum failed");
       }
       // Kickoff next message read.
     }
@@ -228,16 +231,35 @@ public:
       stop();
     }
   }
-  
-  static uint32_t checksum(ros::serialization::IStream& stream) {
-    return fletcher32(stream.getData(), stream.getLength());
+
+  /* Note that checksum function here has a little management to do in order to smooth
+  *   the transition between the classic fletcher32 algorithm and the data format of the
+  *   IStream, which is uint8_t rather than the expected uint16_t
+  *   - The pgs protocol does not consider the etx byte of the message
+  *   - The IStream provides a pointer to a uint8_t stream
+  *   - The fletcher32 algorithm expects a uint16_t stream
+  */
+  static bool validate_checksum(ros::serialization::IStream& stream, uint32_t msg_checksum)
+  {
+    ROS_DEBUG_STREAM_NAMED("pgs_session",
+      "Validating Checksum of message stream against msg_checksum " << msg_checksum);
+    // confirm that we're going to have an appropriate length array
+    uint32_t len = stream.getLength()-1;
+    if (len % 2 > 0)
+    {
+      ROS_DEBUG_STREAM_NAMED("pgs_session", "checksum_stream is malformed with length " << stream.getLength());
+      return false;
+    }
+
+    uint16_t* fletcher32_message = reinterpret_cast<uint16_t*>(stream.getData());
+    uint32_t calc_checksum = fletcher32(fletcher32_message, len);
+    return (msg_checksum == calc_checksum);
   }
 
   uint16_t pgs_directctrl_id_ = 128;
   uint16_t pgs_correction_id_ = 132;
 
   Socket socket_;
-  
   rosserial_server::AsyncReadBuffer<Socket> async_read_buffer_;
   enum { buffer_max = 2048 };
   bool active_ = false;
