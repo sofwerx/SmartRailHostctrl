@@ -4,6 +4,7 @@ project(smartrail_hostctrl)
 ## The following option is necessary for YouCompleteMe to build its 
 #   compiler database
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+set( CMAKE_BUILD_TYPE Debug)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)

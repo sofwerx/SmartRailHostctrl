@@ -1,3 +1,5 @@
+set ( CMAKE_BUILD_TYPE Debug )
+
 ## library include
 include_directories(
     ${catkin_INCLUDE_DIRS}
