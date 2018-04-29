@@ -46,7 +46,9 @@
 #include <ros/callback_queue.h>
 #include <ros/console.h>
 
-namespace rosserial_server
+#include "fletcher32.h"
+
+namespace smartrail_hostctrl
 {
 
 typedef std::vector<uint8_t> Buffer;
@@ -187,7 +189,9 @@ private:
     BufferPtr buffer_ptr(new Buffer(length));
     ros::serialization::OStream stream(&buffer_ptr->at(0), buffer_ptr->size());
     stream << (uint8_t)0x02 << (uint16_t)0x03 << (uint8_t)0x15;
-    stream << (float)3.1428 << (float)9.789 << (uint32_t)0x01 << (uint32_t)0xad;
+    stream << (float)200 << (float)400 << (uint32_t)0x01;
+    uint32_t checksum = fletcher32(reinterpret_cast<uint16_t*>(&buffer_ptr->at(0)), 8);
+    stream << checksum;
     stream << (uint8_t)0x03;
     ROS_DEBUG_NAMED("async_write", "Sending buffer of %d bytes to client.", length);
     boost::asio::async_write(socket_, boost::asio::buffer(*buffer_ptr),
