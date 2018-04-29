@@ -6,7 +6,14 @@
   <arg name="csize" default="8" doc="character size" />
   <arg name="parity" default="N" doc="parity ?" />
   <arg name="stops" default="1" doc="stop bits" />
-  <node pkg="smartrail_hostctrl" type="pgs_stream_node" name="pgs_stream_node" output="screen">
+
+  
+  <!-- if debug is set, we'll have to alter the launch-prefix -->
+  <arg name="debug" default="false"/>
+
+  <group if="$(arg debug)">
+   <node pkg="smartrail_hostctrl" type="pgs_stream_node" name="pgs_stream_node" output="screen"
+    launch-prefix="gdb --tui --args">
     <param name="port" value="$(arg port)" />
     <param name="csize" value="$(arg csize)" />
     <param name="flow" value="$(arg flow)" />
@@ -14,4 +21,16 @@
     <param name="stops" value="$(arg stops)" />
     <param name="baud" value="$(arg baud)" />
   </node>
+ </group>
+
+  <group unless="$(arg debug)">
+    <node pkg="smartrail_hostctrl" type="pgs_stream_node" name="pgs_stream_node" output="screen">
+      <param name="port" value="$(arg port)" />
+      <param name="csize" value="$(arg csize)" />
+      <param name="flow" value="$(arg flow)" />
+      <param name="parity" value="$(arg parity)" />
+      <param name="stops" value="$(arg stops)" />
+      <param name="baud" value="$(arg baud)" />
+    </node>
+  </group>
 </launch>
