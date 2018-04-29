@@ -41,7 +41,7 @@
 using ros::param::param;
 using boost::asio::io_service;
 using std::string;
-using rosserial_server::StreamSession;
+using smartrail_hostctrl::StreamSession;
 
 /* 
  * ===  FUNCTION  ======================================================================
