@@ -235,7 +235,7 @@ public:
   /* Note that checksum function here has a little management to do in order to smooth
   *   the transition between the classic fletcher32 algorithm and the data format of the
   *   IStream, which is uint8_t rather than the expected uint16_t
-  *   - The pgs protocol does not consider the etx byte of the message
+  *   - The pgs protocol does not consider the etx byte of the message nor the checksum bytes
   *   - The IStream provides a pointer to a uint8_t stream
   *   - The fletcher32 algorithm expects a uint16_t stream
   */
@@ -244,7 +244,7 @@ public:
     ROS_DEBUG_STREAM_NAMED("pgs_session",
       "Validating Checksum of message stream against msg_checksum " << msg_checksum);
     // confirm that we're going to have an appropriate length array
-    uint32_t len = stream.getLength()-1;
+    uint32_t len = stream.getLength()-5; //subtract 1 etx and 4 checksum bytes
     if (len % 2 > 0)
     {
       ROS_DEBUG_STREAM_NAMED("pgs_session", "checksum_stream is malformed with length " << stream.getLength());
@@ -252,7 +252,7 @@ public:
     }
 
     uint16_t* fletcher32_message = reinterpret_cast<uint16_t*>(stream.getData());
-    uint32_t calc_checksum = fletcher32(fletcher32_message, len);
+    uint32_t calc_checksum = fletcher32(fletcher32_message, len/2);
     return (msg_checksum == calc_checksum);
   }
 
