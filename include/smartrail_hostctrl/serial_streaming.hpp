@@ -165,7 +165,8 @@ private:
  /** This Implmentation does not receive any messages, it only streams data across
   * its port. It does this at an interval.
   */
-  void write_direct_message(Buffer& message) {
+  void write_direct_message() {
+    std::vector<uint8_t> message(10);
     ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_directo_message using a buffer containing "
       << message.size() << " bytes, and of capacity " << message.capacity()<< " bytes");
     uint16_t length = message.size();
@@ -182,14 +183,15 @@ private:
   }
 
   //// SENDING Correction MESSAGES ////
-  void write_correction_message(Buffer& message) {
+  void write_correction_message(uint32_t msg_counter) {
+    std::vector<uint8_t> message(21);
     ROS_DEBUG_STREAM_NAMED("StreamSession", "Invoked write_correction_message using a buffer containing "
       << message.size() << " bytes, and of capacity " << message.capacity()<< " bytes");
     uint16_t length = message.size();
     BufferPtr buffer_ptr(new Buffer(length));
     ros::serialization::OStream stream(&buffer_ptr->at(0), buffer_ptr->size());
     stream << (uint8_t)0x02 << (uint16_t)0x03 << (uint8_t)0x15;
-    stream << (float)200 << (float)400 << (uint32_t)0x01;
+    stream << (float)200 << (float)400 << (uint32_t)msg_counter;
     uint32_t checksum = fletcher32(reinterpret_cast<uint16_t*>(&buffer_ptr->at(0)), 8);
     stream << checksum;
     stream << (uint8_t)0x03;
@@ -218,9 +220,15 @@ private:
   //// Build Message And Timer ////
   void stream_pulse(const boost::system::error_code& error) {
     ROS_DEBUG("Sending Pulse Message.");
-    std::vector<uint8_t> message(21);
-    write_correction_message(message);
-
+    if(msg_counter_ %2)
+    {
+      write_correction_message(msg_counter_);
+    }
+    else
+    {
+      write_direct_message();
+    }
+    msg_counter_++;
     pulse_timer_.expires_from_now(pulse_interval_);
     pulse_timer_.async_wait(boost::bind(&StreamSession::stream_pulse, this,
           boost::asio::placeholders::error));
@@ -239,6 +247,7 @@ private:
 
   bool active_=false;
   std::string port_;
+  uint32_t msg_counter_;
   int baud_;
   int character_size_;
   bool flow_control_;
