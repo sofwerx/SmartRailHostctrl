@@ -10,8 +10,8 @@
   <author email="gary.hendrick.fellow@sofwerx.org">Gary</author>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
-  <depend>rosserial_msgs</depend>
-  <depend>topic_tools</depend>
+  <depend>geometry_msgs</depend>
+  <depend>flir_ptu_driver</depend>
   <build_depend>roslaunch</build_depend>
   <build_depend>message_generation</build_depend>
   <buildtool_depend>catkin</buildtool_depend>
