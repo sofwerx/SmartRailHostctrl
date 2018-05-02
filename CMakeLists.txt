@@ -17,8 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   rosserial_msgs
   roslaunch
-  topic_tools
   message_generation
+  flir_ptu_driver
 )
 
 # check for common flaws
@@ -34,7 +34,6 @@ find_package(Boost REQUIRED COMPONENTS
 ###################################
 add_message_files(
   FILES
-  PgsDirectControl.msg
   PgsCorrection.msg
 )
 
