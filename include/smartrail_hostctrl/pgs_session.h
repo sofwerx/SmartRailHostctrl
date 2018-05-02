@@ -53,6 +53,7 @@
 namespace smartrail_hostctrl
 {
 
+  // FIXME: these constants may not be necessary as we move forward
   const uint8_t cmd_select_unit[]={0x20, 0x20, 0x5f, 0x30, 0x20};
   const uint8_t cmd_reset[]={0xb0};
 /*  const uint8_t cmd_reset[]={0xb0};
@@ -90,7 +91,7 @@ namespace smartrail_hostctrl
 
         // set up topics for PgsDirectControl and PgsCorrection messages
         ros::Publisher pub_direct =
-          nh_.advertise<flir_ptu_driver::PtuDirectControl>("ptu_direct_control", 128);
+          nh_.advertise<flir_ptu_driver::PtuDirectControl>("/ptu/direct_control", 128);
         publishers_[pgs_directctrl_id_] = pub_direct;
 
         ros::Publisher pub_correction =
@@ -197,7 +198,7 @@ namespace smartrail_hostctrl
             // instead a gimbal control message wrapped in a pgs data frame
             if (byte_count != 21) // TODO: determine if you can use msg_type here rather than byte_count
             {
-              uint32_t payload_length = byte_count - 8; //stx (1) + msg_type (2) + byte_count (1) + msg_checksum (4)
+              uint32_t payload_length = byte_count - 9; //stx(1)+msg_type(2)+byte_count(1)+msg_checksum(4)+etx(1)
               //  Having received a wrapped message, you'll want to push it forward
               ros::serialization::IStream payload(stream.getData(), payload_length);
               ROS_DEBUG_STREAM_NAMED("pgs_session", "Read wrapped direct control message");
@@ -223,9 +224,10 @@ namespace smartrail_hostctrl
               // At this point, you've received a message of the appropriate size
               // Alright, so first off, you're going to have
               try {
+                // FIXME: Replace this with a PtuOffsetCmd Message, which will have to be broadcast and received on the right channel
                 // geometry_msgs::Twist msg_correction;
                 smartrail_hostctrl::PgsCorrection msg_correction;
-                msg_correction.X = X;
+                msg_correction.X=X;
                 msg_correction.Y=Y;
                 // msg_correction.angular.x = X;
                 // msg_correction.angular.y = Y;
