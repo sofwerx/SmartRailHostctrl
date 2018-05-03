@@ -15,7 +15,6 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp 
   std_msgs
-  rosserial_msgs
   roslaunch
   message_generation
   flir_ptu_driver
