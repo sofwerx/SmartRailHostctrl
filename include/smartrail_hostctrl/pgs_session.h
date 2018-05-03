@@ -46,7 +46,7 @@
 #include <std_msgs/Time.h>
 #include "rosserial_server/async_read_buffer.h"
 #include "fletcher32.h"
-#include "smartrail_hostctrl/PgsCorrection.h"
+#include "smartrail_hostctrl/MessageBytes.h"
 #include "flir_ptu_driver/PtuDirectControl.h"
 #include <geometry_msgs/Twist.h>
 
@@ -86,7 +86,7 @@ namespace smartrail_hostctrl
       {
         ROS_DEBUG_NAMED("pgs_session", "Starting session for PGS protocol");
 
-        // set up topics for PgsDirectControl and PgsCorrection messages
+        // set up topics for PgsDirectControl and Delta Messages messages
         ros::Publisher pub_direct =
           nh_.advertise<flir_ptu_driver::PtuDirectControl>("/ptu/direct_control", 128);
         publishers_[pgs_directctrl_id_] = pub_direct;
@@ -94,6 +94,11 @@ namespace smartrail_hostctrl
         ros::Publisher pub_correction =
           nh_.advertise<geometry_msgs::Twist>("/ptu/rotate_relative", 128);
         publishers_[pgs_correction_id_] = pub_correction;
+
+        ros::Publisher pub_pgs_stream =
+          nh_.advertise<smartrail_hostctrl::MessageBytes>("/pgs/serial", 128);
+        publishers_[pgs_stream_id_] = pub_pgs_stream;
+
 
         active_ = true;
 
@@ -227,6 +232,12 @@ namespace smartrail_hostctrl
           ROS_WARN("Buffer overrun when attempting to parse user message.");
         }
 
+        // The message has been handled, no matter its composition, at this point.  For the purposes of communications publish to the appropriate topic
+        ros::serialization::IStream msg_stream(msg_head, msg_len);
+        smartrail_hostctrl::MessageBytes pgs_message;
+        pgs_message.bytes.push_back(*msg_stream.getData());
+        publishers_[pgs_stream_id_].publish(pgs_message);
+
         // at this point all messages have been handled.  Prepare to read the next incoming message
         read_start_byte();
       }
@@ -294,6 +305,7 @@ namespace smartrail_hostctrl
 
       uint16_t pgs_directctrl_id_ = 128;
       uint16_t pgs_correction_id_ = 132;
+      uint16_t pgs_stream_id_ = 136;
 
       Socket socket_;
       rosserial_server::AsyncReadBuffer<Socket> async_read_buffer_;
