@@ -1,0 +1,12 @@
+[Unit]
+Description=ROS Launcher for the Smartrail Service
+ConditionPathExists=/home/odroid/catkin_ws
+
+[Service]
+Type=simple
+User=odroid
+ExecStart=/home/odroid/catkin_ws/src/smartrail_hostctrl/scripts/smartrail_service.sh
+
+[Install]
+WantedBy=multi-user.target
+Alias=smartrail.service
