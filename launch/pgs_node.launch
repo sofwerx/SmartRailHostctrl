@@ -6,12 +6,12 @@
   <arg name="csize" default="8" doc="character size" />
   <arg name="parity" default="N" doc="parity ?" />
   <arg name="stops" default="1" doc="stop bits" />
-  
+  <arg name="output" default="log" doc="where to show the output" /> 
   <!-- if debug is set, we'll have to alter the launch-prefix -->
   <arg name="debug" default="false"/>
 
   <group if="$(arg debug)">
-    <node pkg="smartrail_hostctrl" type="pgs_node" name="pgs_node" output="screen"
+    <node pkg="smartrail_hostctrl" type="pgs_node" name="pgs_node" output="$(arg output)"
       launch-prefix="gdb --tui --args">
       <param name="port" value="$(arg port)" />
       <param name="csize" value="$(arg csize)" />
@@ -23,7 +23,7 @@
   </group>
 
   <group unless="$(arg debug)">
-    <node pkg="smartrail_hostctrl" type="pgs_node" name="pgs_node" output="screen">
+    <node pkg="smartrail_hostctrl" type="pgs_node" name="pgs_node" output="$(arg output)">
       <param name="port" value="$(arg port)" />
       <param name="csize" value="$(arg csize)" />
       <param name="flow" value="$(arg flow)" />

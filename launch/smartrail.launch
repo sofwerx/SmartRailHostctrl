@@ -1,0 +1,17 @@
+<launch>
+    <arg name="debug" default="false"/>
+    <arg name="output" default="log"/>
+    <arg name="pgs_port" default="/dev/ttySAC0"/>
+    <arg name="ptu_port" default="/dev/ttyUSB0"/>
+
+    <include file="$(find smartrail_hostctrl)/launch/pgs_node.launch">
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="output" value="$(arg output)"/>
+        <arg name="port" value="$(arg pgs_port)"/>
+    </include>
+    <include file="$(find flir_ptu_driver)/launch/ptu.launch">
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="output" value="$(arg output)"/>
+        <arg name="port" value="$(arg ptu_port)"/>
+    </include>
+</launch>
