@@ -87,9 +87,9 @@ namespace smartrail_hostctrl
         ROS_DEBUG_NAMED("pgs_session", "Starting session for PGS protocol");
 
         // set up topics for PgsDirectControl and Delta Messages messages
-        ros::Publisher pub_direct =
-          nh_.advertise<flir_ptu_driver::PtuDirectControl>("/ptu/direct_control", 128);
-        publishers_[pgs_directctrl_id_] = pub_direct;
+        ros::Publisher pub_jog =
+          nh_.advertise<geometry_msgs::Twist>("/ptu/jogging", 128);
+        publishers_[pgs_jog_id_] = pub_jog;
 
         ros::Publisher pub_correction =
           nh_.advertise<geometry_msgs::Twist>("/ptu/rotate_relative", 128);
@@ -197,23 +197,24 @@ namespace smartrail_hostctrl
           if (true) // FIXME: after confirming the issues with the checksum seen above, change back to an else statement to preclude bad messages
           {
             ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Checksum Succeeded");
-            // when byte_count is not identical to the byte_count for gimbal correction messages, this is
-            // instead a gimbal control message wrapped in a pgs data frame
-            if (byte_count != 21) // TODO: determine if you can use msg_type here rather than byte_count
+            
+            // this is a jogging message if the msg_type is 0x03
+            if (msg_type == 0x03)
             {
-              uint32_t payload_length = byte_count - 9; //stx(1)+msg_type(2)+byte_count(1)+msg_checksum(4)+etx(1)
-              //  Having received a wrapped message, you'll want to push it forward
-              ros::serialization::IStream payload(stream.getData(), payload_length);
-              ROS_DEBUG_STREAM_NAMED("pgs_session", "Read wrapped direct control message");
-              ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("<<byte_count<<
-                  ") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
-              // At this point, you've received a message of the appropriate size
-              // Alright, so first off, you're going to have
-                flir_ptu_driver::PtuDirectControl msg_direct;
-                msg_direct.command.push_back(*payload.getData());
-                msg_direct.length = payload.getLength();
-                publishers_[pgs_directctrl_id_].publish(msg_direct);
-            } else // this is a gimbal correction message and requires additional decomposition
+              ROS_DEBUG_STREAM_NAMED("pgs_session", "Reading jog message");
+              ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("
+                <<byte_count<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
+              // At this point, you've received a message of the appropriate size and with
+              // containing 
+              geometry_msgs::Twist jog_msg;
+              uint8_t jog_axis, jog_direction;  
+              stream >> jog_axis >> jog_direction;
+              if (jog_axis == 131) jog_msg.angular.x = jog_direction;
+              else if (jog_axis == 132) jog_msg.angular.y = jog_direction;
+              
+              if (jog_msg.angular.x > 0 || jog_msg.angular.y > 0 )
+                  publishers_[pgs_jog_id_].publish(jog_msg);
+            } else if (msg_type == 0x01) // this is a gimbal correction message
             {
               uint32_t msg_counter;
               float X, Y;
@@ -303,7 +304,7 @@ namespace smartrail_hostctrl
       }
 
 
-      uint16_t pgs_directctrl_id_ = 128;
+      uint16_t pgs_jog_id_ = 128;
       uint16_t pgs_correction_id_ = 132;
       uint16_t pgs_stream_id_ = 136;
 
