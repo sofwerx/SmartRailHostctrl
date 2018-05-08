@@ -9,4 +9,3 @@ ExecStart=/home/odroid/catkin_ws/src/smartrail_hostctrl/scripts/smartrail_servic
 
 [Install]
 WantedBy=multi-user.target
-Alias=smartrail.service
