@@ -92,20 +92,26 @@ private:
     ROS_INFO_STREAM("Opened " << port_);
     connection_failuress_ = 0;
 
-    // flush this port if (flush)
+    // flush this port if there are any bytes on it
     boost::system::error_code error;
-    if (0 == ::tcflush(socket().lowest_layer().native_handle(), TCIOFLUSH))
-    {
-      ROS_DEBUG_STREAM_NAMED("pgs_serial", "tcflush returned 0");
-      error = boost::system::error_code();
+
+    int available_bytes;
+    ::ioctl(socket().lowest_layer().native_handle(), FIONREAD, &available_bytes);
+    ROS_DEBUG_STREAM("Port " << port_ << " has " << available_bytes  << " available bytes.");
+    if (available_bytes > 0) {
+      if (0 == ::tcflush(socket().lowest_layer().native_handle(), TCIOFLUSH))
+      {
+        ROS_DEBUG_STREAM_NAMED("pgs_serial", "successful flush of port ");
+        error = boost::system::error_code();
+      }
+      else
+      {
+        ROS_DEBUG_STREAM_NAMED("pgs_serial", "tcflush gave us some kind of error ");
+        error = boost::system::error_code(errno,
+            boost::asio::error::get_system_category());
+      }
+      ROS_DEBUG_STREAM_NAMED("serial_session", "flush: " << error.message());
     }
-    else
-    {
-      ROS_DEBUG_STREAM_NAMED("pgs_serial", "tcflush gave us some kind of error ");
-      error = boost::system::error_code(errno,
-          boost::asio::error::get_system_category());
-    }
-    ROS_DEBUG_STREAM_NAMED("serial_session", "flush: " << error.message());
 
     typedef boost::asio::serial_port_base serial;
     socket().set_option(serial::baud_rate(baud_));

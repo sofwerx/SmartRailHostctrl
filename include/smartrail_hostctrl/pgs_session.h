@@ -197,7 +197,7 @@ namespace smartrail_hostctrl
           if (true) // FIXME: after confirming the issues with the checksum seen above, change back to an else statement to preclude bad messages
           {
             ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Checksum Succeeded");
-            
+
             // this is a jogging message if the msg_type is 0x03
             if (msg_type == 0x03)
             {
@@ -205,14 +205,15 @@ namespace smartrail_hostctrl
               ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("
                 <<byte_count<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
               // At this point, you've received a message of the appropriate size and with
-              // containing 
+              // containing
               geometry_msgs::Twist jog_msg;
-              uint8_t jog_axis, jog_direction;  
+              uint8_t jog_axis;
+              int8_t jog_direction;
               stream >> jog_axis >> jog_direction;
               if (jog_axis == 131) jog_msg.angular.x = jog_direction;
               else if (jog_axis == 132) jog_msg.angular.y = jog_direction;
-              
-              if (jog_msg.angular.x > 0 || jog_msg.angular.y > 0 )
+
+            if (jog_msg.angular.x > 0 || jog_msg.angular.y > 0 )
                   publishers_[pgs_jog_id_].publish(jog_msg);
             } else if (msg_type == 0x01) // this is a gimbal correction message
             {
@@ -269,20 +270,15 @@ namespace smartrail_hostctrl
             "Validating Checksum of message stream against msg_checksum " << msg_checksum);
         // confirm that we're going to have an appropriate length array
         uint32_t len = stream.getLength()-5; //subtract 1 etx and 4 checksum bytes
-        /* FIXME: see if you can create a reinterpret cast with the appropriate padding on the last byte of an odd sized one
-           if (len % 2 > 0)
-           {
-           ROS_DEBUG_STREAM_NAMED("pgs_session", "checksum_stream is malformed with length " << stream.getLength());
-           return false;
-           }
-           */
         uint16_t* fletcher32_message = reinterpret_cast<uint16_t*>(stream.getData());
         uint32_t calc_checksum = fletcher32(fletcher32_message, len %2 ? len/2 + 1: len/2);
-        return (msg_checksum == calc_checksum);
+
+        // FIXME: Tracking Point PGS Data fails miscalculates signed uint16_t members
+        return (msg_checksum == calc_checksum || msg_checksum == (calc_checksum + 65537));
       }
 
       /* using the pixel resolution of the PGS, calculate the requested pan offset in radians
-         This belngs in the pgs_node, as the pixel resolution of the camera is reqired to make this calculation 
+         This belngs in the pgs_node, as the pixel resolution of the camera is reqired to make this calculation
           param X: requested correction in pixels
           return float radians of correction
       */
