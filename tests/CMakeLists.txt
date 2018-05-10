@@ -14,11 +14,11 @@ if (TARGET ${PROJECT_NAME}-fletcher32-test)
 )
 endif()
 
-catkin_add_gtest(${PROJECT_NAME}-serial-test test_serial.cpp)
-if (TARGET ${PROJECT_NAME}-serial-test)
-    target_link_libraries(${PROJECT_NAME}-serial-test
-        ${catkin_LIBRARIES}
-        ${GTEST_LIBRARIES}
-        ${Boost_LIBRARIES}
-    )
-endif()
+# catkin_add_gtest(${PROJECT_NAME}-serial-test test_serial.cpp)
+# if (TARGET ${PROJECT_NAME}-serial-test)
+#     target_link_libraries(${PROJECT_NAME}-serial-test
+#         ${catkin_LIBRARIES}
+#         ${GTEST_LIBRARIES}
+#         ${Boost_LIBRARIES}
+#     )
+# endif()

@@ -44,13 +44,13 @@ namespace {
     char str[] = "abcde";
     size_t len = strlen(str);
 
-    uint16_t as_ints[len];
+    uint8_t as_ints[len];
 
     for(int i=0; i <= len; i++) {
       as_ints[i] = str[i];
     };
 
-    ASSERT_EQ(0xc8f0, fletcher32(as_ints, len));
+    ASSERT_EQ(0xF04FC729, fletcher32(as_ints, len));
   }
   
   TEST(Fletcher32, abcdef)
@@ -58,13 +58,13 @@ namespace {
     char str[] = "abcdef";
     size_t len = strlen(str);
 
-    uint16_t as_ints[len];
+    uint8_t as_ints[len];
 
     for(int i=0; i <= len; i++) {
       as_ints[i] = str[i];
     };
 
-    ASSERT_EQ(0x2057, fletcher32(as_ints, len));
+    ASSERT_EQ(0x56502D2A, fletcher32(as_ints, len));
   }
 
   TEST(Fletcher32, abcdefgh)
@@ -72,13 +72,13 @@ namespace {
     char str[] = "abcdefgh";
     size_t len = strlen(str);
 
-    uint16_t as_ints[len];
+    uint8_t as_ints[len];
 
     for(int i=0; i <= len; i++) {
       as_ints[i] = str[i];
     };
 
-    ASSERT_EQ(0x0627, fletcher32(as_ints, len));
+    ASSERT_EQ(0xEBE19591, fletcher32(as_ints, len));
   }
 } // namespace 
 /* 
