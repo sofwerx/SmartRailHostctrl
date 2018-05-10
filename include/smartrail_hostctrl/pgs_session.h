@@ -270,11 +270,10 @@ namespace smartrail_hostctrl
             "Validating Checksum of message stream against msg_checksum " << msg_checksum);
         // confirm that we're going to have an appropriate length array
         uint32_t len = stream.getLength()-5; //subtract 1 etx and 4 checksum bytes
-        uint16_t* fletcher32_message = reinterpret_cast<uint16_t*>(stream.getData());
-        uint32_t calc_checksum = fletcher32(fletcher32_message, len %2 ? len/2 + 1: len/2);
+        uint32_t calc_checksum = fletcher32(stream.getData(), len);
 
         // FIXME: Tracking Point PGS Data fails miscalculates signed uint16_t members
-        return (msg_checksum == calc_checksum || msg_checksum == (calc_checksum + 65537));
+        return (msg_checksum == calc_checksum);
       }
 
       /* using the pixel resolution of the PGS, calculate the requested pan offset in radians

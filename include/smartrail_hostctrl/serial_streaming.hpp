@@ -192,7 +192,7 @@ private:
     ros::serialization::OStream stream(&buffer_ptr->at(0), buffer_ptr->size());
     stream << (uint8_t)0x02 << (uint16_t)0x03 << (uint8_t)0x15;
     stream << (float)200 << (float)400 << (uint32_t)msg_counter;
-    uint32_t checksum = fletcher32(reinterpret_cast<uint16_t*>(&buffer_ptr->at(0)), 8);
+    uint32_t checksum = fletcher32(&buffer_ptr->at(0), 8);
     stream << checksum;
     stream << (uint8_t)0x03;
     ROS_DEBUG_NAMED("async_write", "Sending buffer of %d bytes to client.", length);
