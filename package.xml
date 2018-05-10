@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>smartrail_hostctrl</name>
-  <version>0.1.1</version>
+  <version>1.0.1</version>
   <description>the smartrail host controller presents a ROS package consisting of nodes to integrate communications, control and kinematics between the smart rail precision guidance scope and gimbal.</description>
 
   <maintainer email="gary.hendrick.fellow@sofwerx.org">Gary</maintainer>
