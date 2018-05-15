@@ -73,9 +73,18 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(pgs_node src/pgs_node.cpp)
+add_executable(pan_scan src/pan_scan.cpp)
+add_executable(tilt_scan src/tilt_scan.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(pgs_node
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(pan_scan
+   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(tilt_scan
    ${catkin_LIBRARIES}
 )
 
@@ -87,6 +96,7 @@ add_executable(pgs_stream_node src/pgs_stream_node.cpp)
 target_link_libraries(pgs_stream_node
    ${catkin_LIBRARIES}
 )
+
 ## set target properties to help clarify output
 set_target_properties(pgs_stream_node PROPERTIES OUTPUT_NAME pgs_stream_node PREFIX "")
 
