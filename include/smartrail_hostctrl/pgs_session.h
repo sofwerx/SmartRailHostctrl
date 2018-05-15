@@ -211,9 +211,9 @@ namespace smartrail_hostctrl
               int8_t jog_direction;
               stream >> jog_axis >> jog_direction;
               if (jog_axis == 131) jog_msg.angular.x = jog_direction;
-              else if (jog_axis == 132) jog_msg.angular.y = jog_direction;
+              else if (jog_axis == 132) jog_msg.angular.y = -1*jog_direction;
 
-            if (jog_msg.angular.x > 0 || jog_msg.angular.y > 0 )
+            if (jog_msg.angular.x != 0 || jog_msg.angular.y != 0 )
                   publishers_[pgs_jog_id_].publish(jog_msg);
             } else if (msg_type == 0x01) // this is a gimbal correction message
             {
