@@ -20,7 +20,7 @@
       <param name="parity" value="$(arg parity)" />
       <param name="stops" value="$(arg stops)" />
       <param name="baud" value="$(arg baud)" />
-      <param name="lag_interval" value="$(lag_interval)" />
+      <param name="lag_interval" value="$(arg lag_interval)" />
     </node>
   </group>
 
@@ -32,7 +32,7 @@
       <param name="parity" value="$(arg parity)" />
       <param name="stops" value="$(arg stops)" />
       <param name="baud" value="$(arg baud)" />
-      <param name="lag_interval" value="$(lag_interval)" />
+      <param name="lag_interval" value="$(arg lag_interval)" />
     </node>
   </group>
 </launch>

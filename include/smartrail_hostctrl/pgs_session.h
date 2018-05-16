@@ -202,7 +202,7 @@ namespace smartrail_hostctrl
             {
               ROS_DEBUG_STREAM_NAMED("pgs_session", "Reading jog message");
               ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("
-                <<byte_count<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
+                  <<byte_count<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
               // At this point, you've received a message of the appropriate size and with
               // containing
               geometry_msgs::Twist jog_msg;
@@ -212,9 +212,10 @@ namespace smartrail_hostctrl
               if (jog_axis == 131) jog_msg.angular.x = jog_direction;
               else if (jog_axis == 132) jog_msg.angular.y = -1*jog_direction;
 
-            if (jog_msg.angular.x != 0 || jog_msg.angular.y != 0 )
-                  publishers_[pgs_jog_id_].publish(jog_msg);
-            } else if (msg_type == 0x01) // this is a gimbal correction message
+              if (jog_msg.angular.x != 0 || jog_msg.angular.y != 0 )
+                publishers_[pgs_jog_id_].publish(jog_msg);
+            }
+            else if (msg_type == 0x01) // this is a gimbal correction message
             {
               uint32_t msg_counter;
               float X, Y;
@@ -222,10 +223,24 @@ namespace smartrail_hostctrl
               ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("<<byte_count<<
                   ") X("<<X<<") Y("<<Y<<") msg_counter("<<msg_counter<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
               // At this point, you've received a message of the appropriate size
-              // Alright, so first off, you're going to have
+              // Make a space for the message, then push new data onto them
+              x_corrections_.push_front(calculate_pan_rotation(X));
+              y_corrections_.push_front(calculate_tilt_rotation(Y));
+
+              if (x_corrections_.size() > 5)
+              {
+                x_corrections_.pop_back();
+                x_corrections_.resize(5);
+              }
+              if (y_corrections_.size() > 5)
+              {
+                y_corrections_.pop_back();
+                y_corrections_.resize(5);
+              }
+
               geometry_msgs::Twist ptu_rotation;
-              ptu_rotation.angular.x = calculate_pan_rotation(X);
-              ptu_rotation.angular.y = calculate_tilt_rotation(Y);
+              build_correction(ptu_rotation);
+
               publishers_[pgs_correction_id_].publish(ptu_rotation);
             }
           }
@@ -272,15 +287,25 @@ namespace smartrail_hostctrl
         uint32_t len = stream.getLength()-5; //subtract 1 etx and 4 checksum bytes
         uint32_t calc_checksum = fletcher32(stream.getData(), len);
 
-        // FIXME: Tracking Point PGS Data fails miscalculates signed uint16_t members
         return (msg_checksum == calc_checksum);
+      }
+
+      // build the correction twist using the median filter deques
+      void build_correction(geometry_msgs::Twist& twist) {
+        std::deque<float> tmp_xcor(x_corrections_);
+        std::deque<float> tmp_ycor(y_corrections_);
+        std::sort(tmp_xcor.begin(), tmp_xcor.end());
+        std::sort(tmp_ycor.begin(), tmp_ycor.end());
+
+        twist.angular.x = tmp_xcor[2];
+        twist.angular.y = tmp_ycor[2];
       }
 
       /* using the pixel resolution of the PGS, calculate the requested pan offset in radians
          This belngs in the pgs_node, as the pixel resolution of the camera is reqired to make this calculation
-          param X: requested correction in pixels
-          return float radians of correction
-      */
+         param X: requested correction in pixels
+         return float radians of correction
+         */
       float calculate_pan_rotation(float X)
       {
         // m_pan_resolution is provided pgs_res_arcsec_per_pix * X pix * rad/arcsec= rad
@@ -288,10 +313,10 @@ namespace smartrail_hostctrl
       }
 
       /* using the pixel resolution of the PGS, calculate the requested pan offset in radians
-         This belngs in the pgs_node, as the pixel resolution of the camera is reqired to make this calculation 
-          param Y: requested correction in pixels
-          return float radians of correction
-      */
+         This belngs in the pgs_node, as the pixel resolution of the camera is reqired to make this calculation
+         param Y: requested correction in pixels
+         return float radians of correction
+         */
       float calculate_tilt_rotation(float Y)
       {
         // m_pan_resolution is provided pgs_res_arcsec_per_pix * X pix * rad/arcsec= rad
@@ -315,6 +340,8 @@ namespace smartrail_hostctrl
       boost::posix_time::time_duration ros_spin_interval_;
       boost::asio::deadline_timer ros_spin_timer_;
       std::map<uint16_t, ros::Publisher> publishers_;
+      std::deque<float> x_corrections_ {0, 0, 0, 0, 0};
+      std::deque<float> y_corrections_ {0, 0, 0, 0, 0};
   };
 
 }  // namespace
