@@ -73,9 +73,23 @@ class PanWorker
 
     // Subscribers : Only subscribe to the most recent instructions
     m_ros_joint_state_listener = nh.subscribe<JointState>("/joint_states", 1, &PanWorker::joint_state_listener, this);
+
+    build_pos(m_left_position);
+    build_pos(m_right_position);
+    build_pos(m_initial_pos);
   }
 
   protected:
+    void build_pos(JointState& js)
+    {
+      js.header.stamp = ros::Time::now();
+      js.name.resize(2);
+      js.position.resize(2);
+      js.velocity.resize(2);
+      js.name[0] = "pan";
+      js.name[1] = "tilt";
+    }
+
     void ros_spin_timeout(const boost::system::error_code& error) 
     {
       ros_callback_queue_.callAvailable();
@@ -104,8 +118,12 @@ class PanWorker
         m_initial_pos = m_current_pos;
         m_left_position.position[1] = m_current_pos.position[1];
         m_left_position.position[0] = m_current_pos.position[0] - SWEEP/2;
+        m_left_position.velocity[0] = m_current_pos.velocity[0];
+        m_left_position.velocity[1] = m_current_pos.velocity[1];
         m_right_position.position[1] = m_current_pos.position[1];
         m_right_position.position[0] = m_current_pos.position[0] + SWEEP/2;
+        m_right_position.velocity[0] = m_current_pos.velocity[0];
+        m_right_position.velocity[1] = m_current_pos.velocity[1];
         m_is_valid = true;
         pan(m_left_position);
       }		/* -----  end of function joint_state_listener  ----- */
