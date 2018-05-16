@@ -268,6 +268,7 @@ namespace smartrail_hostctrl
         ROS_DEBUG_STREAM_NAMED("pgs_session",
             "Validating Checksum of message stream against msg_checksum " << msg_checksum);
         // confirm that we're going to have an appropriate length array
+        // confirm that we're going to have an appropriate length array
         uint32_t len = stream.getLength()-5; //subtract 1 etx and 4 checksum bytes
         uint32_t calc_checksum = fletcher32(stream.getData(), len);
 
