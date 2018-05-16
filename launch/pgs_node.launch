@@ -7,6 +7,7 @@
   <arg name="parity" default="N" doc="parity ?" />
   <arg name="stops" default="1" doc="stop bits" />
   <arg name="output" default="log" doc="where to show the output" /> 
+  <arg name="lag_interval" default="0.0" doc="leave a short period of time between target lock and resolution" /> 
   <!-- if debug is set, we'll have to alter the launch-prefix -->
   <arg name="debug" default="false"/>
 
@@ -19,6 +20,7 @@
       <param name="parity" value="$(arg parity)" />
       <param name="stops" value="$(arg stops)" />
       <param name="baud" value="$(arg baud)" />
+      <param name="lag_interval" value="$(lag_interval)" />
     </node>
   </group>
 
@@ -30,6 +32,7 @@
       <param name="parity" value="$(arg parity)" />
       <param name="stops" value="$(arg stops)" />
       <param name="baud" value="$(arg baud)" />
+      <param name="lag_interval" value="$(lag_interval)" />
     </node>
   </group>
 </launch>

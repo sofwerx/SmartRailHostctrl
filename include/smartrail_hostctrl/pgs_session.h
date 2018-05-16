@@ -189,12 +189,11 @@ namespace smartrail_hostctrl
 
           stream = ros::serialization::IStream(stream_bookmark, msg_len - 4);
 
-          // FIXME: the following validation fails for direct control messages right now
           if (!validate_checksum(checksum_stream, msg_checksum))
           { // failed to pass checksum testing
             ROS_INFO_STREAM_NAMED("pgs_session", "Message checksum failed");
           }
-          if (true) // FIXME: after confirming the issues with the checksum seen above, change back to an else statement to preclude bad messages
+          if (true)
           {
             ROS_DEBUG_STREAM_NAMED("pgs_session", "Message Checksum Succeeded");
 

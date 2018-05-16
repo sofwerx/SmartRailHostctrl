@@ -64,6 +64,7 @@ int main ( int argc, char *argv[] )
   bool flow_control=false;
   bool parity=false;
   int stop_bits=1; 
+  float lag_interval=0.0f;
 
   if (!nh.hasParam("/pgs_node/port")) {
     ROS_ERROR("pgs_node has not been supplied a port value, exiting without.");
@@ -77,13 +78,15 @@ int main ( int argc, char *argv[] )
   nh.getParam("/pgs_node/flow", flow_control);
   nh.getParam("/pgs_node/parity", parity);
   nh.getParam("/pgs_node/stop_bits", stop_bits);
+  nh.getParam("/pgs_node/stop_bits", stop_bits);
+  nh.getParam("/pgs_node/lag_interval", lag_interval);
 
   // a little debug for the configuration
   ROS_DEBUG("Parameters set and ready to establish connection using (port=%s, baud=%d, csize=%d,\
     flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
   // initialize an io_service and a serial session before entering into the run call
   io_service io;
-  SerialPgsSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits);
+  SerialPgsSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits, lag_interval);
   io.run();
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */
