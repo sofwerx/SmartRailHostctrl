@@ -83,7 +83,8 @@ int main ( int argc, char *argv[] )
 
   // a little debug for the configuration
   ROS_DEBUG("Parameters set and ready to establish connection using (port=%s, baud=%d, csize=%d,\
-    flow=%d, parity=%d, stop_bits=%d", port.c_str(), baud, character_size, flow_control, parity, stop_bits);
+    flow=%d, parity=%d, stop_bits=%d, lag_interval=%f", port.c_str(), baud, character_size, flow_control, parity, 
+    stop_bits, lag_interval);
   // initialize an io_service and a serial session before entering into the run call
   io_service io;
   SerialPgsSession serial_session(io, port, baud, character_size, flow_control, parity, stop_bits, lag_interval);

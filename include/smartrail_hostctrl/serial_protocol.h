@@ -48,9 +48,9 @@ class SerialPgsSession: public PgsSession<boost::asio::serial_port>
 {
 public:
   SerialPgsSession(boost::asio::io_service& io_service, std::string port, int baud, int character_size,
-    bool flow_control, bool parity, int stop_bits, bool lag_interval)
-    : PgsSession(io_service), port_(port), baud_(baud), character_size_(character_size),
-        flow_control_(flow_control), parity_(parity), stop_bits_(stop_bits), lag_interval_(lag_interval), timer_(io_service)
+    bool flow_control, bool parity, int stop_bits, float lag_interval)
+    : PgsSession(io_service, lag_interval), port_(port), baud_(baud), character_size_(character_size),
+        flow_control_(flow_control), parity_(parity), stop_bits_(stop_bits), timer_(io_service)
    {
     ROS_INFO_STREAM_NAMED("pgs_session", "SerialPgsSession configured for " << port_ << " at " << baud << "bps.");
     connection_failuress_ = 0;
@@ -128,7 +128,6 @@ private:
   int baud_;
   int character_size_;
   bool flow_control_;
-  bool lag_interval_;
   bool parity_;
   int stop_bits_;
   int connection_failuress_;

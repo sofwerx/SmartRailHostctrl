@@ -62,14 +62,13 @@ namespace smartrail_hostctrl
     class PgsSession : boost::noncopyable
   {
     public:
-      PgsSession(boost::asio::io_service& io_service)
+      PgsSession(boost::asio::io_service& io_service, float lag_interval)
         : socket_(io_service),
-        ros_spin_timer_(io_service),
-        async_read_buffer_(socket_, buffer_max,
+        ros_spin_timer_(io_service), async_read_buffer_(socket_, buffer_max,
             boost::bind(&PgsSession::read_failed, this,
-              boost::asio::placeholders::error))
+              boost::asio::placeholders::error)), lag_interval_(lag_interval)
     {
-      ros_spin_interval_ = boost::posix_time::milliseconds(10);
+      ros_spin_interval_ = boost::posix_time::milliseconds(200); // FIXME: check this out, timing is dramatically different
       nh_.setCallbackQueue(&ros_callback_queue_);
 
       ros_spin_timer_.expires_from_now(ros_spin_interval_);
@@ -99,7 +98,6 @@ namespace smartrail_hostctrl
           nh_.advertise<smartrail_hostctrl::MessageBytes>("/pgs/serial", 128);
         publishers_[pgs_stream_id_] = pub_pgs_stream;
 
-
         active_ = true;
 
         read_start_byte();
@@ -119,6 +117,9 @@ namespace smartrail_hostctrl
       {
         return active_;
       }
+    protected:
+      float lag_interval_ = 0.0;
+
 
     private:
       /**
@@ -217,31 +218,42 @@ namespace smartrail_hostctrl
             }
             else if (msg_type == 0x01) // this is a gimbal correction message
             {
-              uint32_t msg_counter;
-              float X, Y;
-              stream >> X >> Y >> msg_counter >> msg_checksum >> etx;
-              ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("<<byte_count<<
-                  ") X("<<X<<") Y("<<Y<<") msg_counter("<<msg_counter<<") msg_checksum("<<msg_checksum<<") etx("<<etx<<")");
-              // At this point, you've received a message of the appropriate size
-              // Make a space for the message, then push new data onto them
-              x_corrections_.push_front(calculate_pan_rotation(X));
-              y_corrections_.push_front(calculate_tilt_rotation(Y));
+              if (!is_lagging) { // a message has been received, and we are not currently skipping them
+                // lagging should be initiated on the first message received
+                if (lag_interval_ > 0.0 && !is_in_correction)
+                {
+                  is_lagging = true;
+                  is_in_correction = true;
+                } else
+                { // This message is in a correction state and not currently lagging
+                  uint32_t msg_counter;
+                  float X, Y;
+                  stream >> X >> Y >> msg_counter >> msg_checksum >> etx;
+                  ROS_DEBUG_STREAM("Message Contains stx("<<stx<<") type("<<msg_type<<") byte_count("
+                      <<byte_count<<") X("<<X<<") Y("<<Y<<") msg_counter("<<msg_counter<<") msg_checksum("
+                      <<msg_checksum<<") etx("<<etx<<")");
 
-              if (x_corrections_.size() > 5)
-              {
-                x_corrections_.pop_back();
-                x_corrections_.resize(5);
+                  // At this point, a correction message has been recieved.  Add to corrections deques
+                  x_corrections_.push_front(calculate_pan_rotation(X));
+                  y_corrections_.push_front(calculate_tilt_rotation(Y));
+
+                  if (x_corrections_.size() > 5)
+                  {
+                    x_corrections_.pop_back();
+                    x_corrections_.resize(5);
+                  }
+                  if (y_corrections_.size() > 5)
+                  {
+                    y_corrections_.pop_back();
+                    y_corrections_.resize(5);
+                  }
+
+                  geometry_msgs::Twist ptu_rotation;
+                  build_correction(ptu_rotation);
+
+                  publishers_[pgs_correction_id_].publish(ptu_rotation);
+                }
               }
-              if (y_corrections_.size() > 5)
-              {
-                y_corrections_.pop_back();
-                y_corrections_.resize(5);
-              }
-
-              geometry_msgs::Twist ptu_rotation;
-              build_correction(ptu_rotation);
-
-              publishers_[pgs_correction_id_].publish(ptu_rotation);
             }
           }
         } catch(ros::serialization::StreamOverrunException e) {
@@ -323,6 +335,11 @@ namespace smartrail_hostctrl
         return pgs_res_arcsec_per_pix * Y * RADIANS_PER_ARCSECOND;
       }
 
+      void lag_correction_timeout(const boost::system::error_code& error)
+      {
+        ROS_DEBUG_STREAM_NAMED("PgsSession", "Lag Timeout Reached, Cleared for Correction");
+        is_lagging = false; 
+      }
 
       uint16_t pgs_jog_id_ = 128;
       uint16_t pgs_correction_id_ = 132;
@@ -332,11 +349,11 @@ namespace smartrail_hostctrl
       rosserial_server::AsyncReadBuffer<Socket> async_read_buffer_;
       enum { buffer_max = 2048 };
       bool active_ = false;
+      bool is_lagging = false;
+      bool is_in_correction = false;
 
       ros::NodeHandle nh_;
-
       ros::CallbackQueue ros_callback_queue_;
-
       boost::posix_time::time_duration ros_spin_interval_;
       boost::asio::deadline_timer ros_spin_timer_;
       std::map<uint16_t, ros::Publisher> publishers_;
