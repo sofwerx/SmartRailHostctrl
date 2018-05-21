@@ -64,16 +64,19 @@ namespace smartrail_hostctrl
     public:
       PgsSession(boost::asio::io_service& io_service, float lag_interval)
         : socket_(io_service),
-        ros_spin_timer_(io_service), async_read_buffer_(socket_, buffer_max,
-            boost::bind(&PgsSession::read_failed, this,
+        ros_spin_timer_(io_service),
+        lag_reset_timer_(io_service),
+        async_read_buffer_(socket_, buffer_max, boost::bind(&PgsSession::read_failed, this,
               boost::asio::placeholders::error)), lag_interval_(lag_interval)
     {
-      ros_spin_interval_ = boost::posix_time::milliseconds(200); // FIXME: check this out, timing is dramatically different
       nh_.setCallbackQueue(&ros_callback_queue_);
+      ros_spin_interval_ = boost::posix_time::milliseconds(200); // FIXME: check this out, timing is dramatically different
 
       ros_spin_timer_.expires_from_now(ros_spin_interval_);
       ros_spin_timer_.async_wait(boost::bind(&PgsSession::ros_spin_timeout, this,
             boost::asio::placeholders::error));
+
+      lag_reset_interval_ = boost::posix_time::milliseconds(500);
     }
 
       Socket& socket()
@@ -220,12 +223,16 @@ namespace smartrail_hostctrl
             {
               if (!is_lagging) { // a message has been received, and we are not currently skipping them
                 // lagging should be initiated on the first message received
-                if (lag_interval_ > 0.0 && !is_in_correction)
+                if (lag_interval_ > 0.0 && lag_message_counter == 0)
                 {
                   is_lagging = true;
-                  is_in_correction = true;
+                  lag_message_counter++;
                 } else
-                { // This message is in a correction state and not currently lagging
+                {
+                  lag_reset_timer_.expires_from_now(lag_reset_interval_);
+                  lag_reset_timer_.async_wait(boost::bind(&PgsSession::lag_reset_timeout, this,
+                        boost::asio::placeholders::error));
+                  // This message is in a correction state and not currently lagging
                   uint32_t msg_counter;
                   float X, Y;
                   stream >> X >> Y >> msg_counter >> msg_checksum >> etx;
@@ -254,6 +261,14 @@ namespace smartrail_hostctrl
                   publishers_[pgs_correction_id_].publish(ptu_rotation);
                 }
               }
+              else
+              {
+                lag_message_counter++;
+                if (lag_message_counter > 52)
+                {
+                  clear_lag();
+                }
+              }
             }
           }
         } catch(ros::serialization::StreamOverrunException e) {
@@ -268,6 +283,19 @@ namespace smartrail_hostctrl
 
         // at this point all messages have been handled.  Prepare to read the next incoming message
         read_start_byte();
+      }
+
+      void clear_lag()
+      {
+        is_lagging = false;
+        lag_reset_timer_.expires_from_now(lag_reset_interval_);
+        lag_reset_timer_.async_wait(boost::bind(&PgsSession::lag_reset_timeout, this,
+              boost::asio::placeholders::error));
+      }
+
+      void lag_reset_timeout(const boost::system::error_code& error)
+      {
+        lag_message_counter = 0;
       }
 
       void read_failed(const boost::system::error_code& error) {
@@ -350,12 +378,14 @@ namespace smartrail_hostctrl
       enum { buffer_max = 2048 };
       bool active_ = false;
       bool is_lagging = false;
-      bool is_in_correction = false;
+      int lag_message_counter = 0;
 
       ros::NodeHandle nh_;
       ros::CallbackQueue ros_callback_queue_;
       boost::posix_time::time_duration ros_spin_interval_;
+      boost::posix_time::time_duration lag_reset_interval_;
       boost::asio::deadline_timer ros_spin_timer_;
+      boost::asio::deadline_timer lag_reset_timer_;
       std::map<uint16_t, ros::Publisher> publishers_;
       std::deque<float> x_corrections_ {0, 0, 0, 0, 0};
       std::deque<float> y_corrections_ {0, 0, 0, 0, 0};
